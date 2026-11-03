@@ -1,0 +1,27 @@
+{
+  "name": "web-test-cases",
+  "version": "1.0.0",
+  "description": "",
+  "main": "playwright.config.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mychits/Web-Test-Cases.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mychits/Web-Test-Cases/issues"
+  },
+  "homepage": "https://github.com/mychits/Web-Test-Cases#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
+  }
+}
