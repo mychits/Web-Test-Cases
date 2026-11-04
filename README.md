@@ -111,6 +111,55 @@ To open the Playwright HTML report:
 ```bash
 npx playwright show-report
 ```
+# Playwright Automation Run Commands For Leads
+
+## 1. Install Dependencies
+
+```bash
+npm install
+```
+
+## 2. Install Chromium
+
+```bash
+npx playwright install chromium
+```
+
+## 3. Run Login Automation
+
+```bash
+npx playwright test tests/auth/1.LoginAutomation.spec.js --project=chromium --headed --workers=1
+```
+
+## 4. Run Five Leads Automation
+
+```bash
+npx playwright test tests/auth/leads.spec.js --project=chromium --headed --workers=1
+```
+
+## 5. Run All Automation Tests
+
+```bash
+npx playwright test --project=chromium --headed --workers=1
+```
+
+## 6. Run Tests Without Opening Browser
+
+```bash
+npx playwright test --project=chromium --workers=1
+```
+
+## 7. Open Playwright Report
+
+```bash
+npx playwright show-report
+```
+
+## 8. Run Login Automation in Debug Mode
+
+```bash
+npx playwright test tests/auth/1.LoginAutomation.spec.js --project=chromium --debug
+```
 
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
 
