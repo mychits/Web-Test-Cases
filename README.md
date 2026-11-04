@@ -169,11 +169,9 @@ npx playwright test tests/auth/LeadsDelete.spec.js --project=chromium --headed -
 ```
 
 ## Playwright Automation Run Commands For Agents
-```
+
 # 1. Run Agent Add Test
 npx playwright test tests/auth/AgentAdd.spec.js --project=chromium --headed --workers=1
-
-```
 
 # 2. Run Agent Delete Test
 npx playwright test tests/auth/AgentDelete.spec.js --project=chromium --headed --workers=1
