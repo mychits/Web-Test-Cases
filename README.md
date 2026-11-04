@@ -173,12 +173,13 @@ npx playwright test tests/auth/LeadsDelete.spec.js --project=chromium --headed -
 # 1. Run Agent Add Test
 npx playwright test tests/auth/AgentAdd.spec.js --project=chromium --headed --workers=1
 
+```
+
 # 2. Run Agent Delete Test
 npx playwright test tests/auth/AgentDelete.spec.js --project=chromium --headed --workers=1
 
 # 3. Check Git Changes
 git status
-
 # 4. Add README File
 git add README.md
 
