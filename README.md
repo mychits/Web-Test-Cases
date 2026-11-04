@@ -128,13 +128,13 @@ npx playwright install chromium
 ## 3. Run Login Automation
 
 ```bash
-npx playwright test tests/auth/1.LoginAutomation.spec.js --project=chromium --headed --workers=1
+npx playwright test tests/auth/LoginAutomation.spec.js --project=chromium --headed --workers=1
 ```
 
 ## 4. Run Five Leads Automation
 
 ```bash
-npx playwright test tests/auth/leads.spec.js --project=chromium --headed --workers=1
+npx playwright test tests/auth/LeadsAdd.spec.js --project=chromium --headed --workers=1
 ```
 
 ## 5. Run All Automation Tests
@@ -158,7 +158,7 @@ npx playwright show-report
 ## 8. Run Login Automation in Debug Mode
 
 ```bash
-npx playwright test tests/auth/1.LoginAutomation.spec.js --project=chromium --debug
+npx playwright test tests/auth/LoginAutomation.spec.js --project=chromium --debug
 ```
 
 ## 9.Lead Delete Auomation
