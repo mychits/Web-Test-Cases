@@ -161,6 +161,12 @@ npx playwright show-report
 npx playwright test tests/auth/1.LoginAutomation.spec.js --project=chromium --debug
 ```
 
+## 9.Lead Delete Auomation
+
+```bash
+npx playwright test tests/auth/LeadsDelete.spec.js --project=chromium --headed --workers=1
+```
+
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
 
 ## Customer Creation Test Scenario

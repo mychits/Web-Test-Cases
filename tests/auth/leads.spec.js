@@ -12,7 +12,40 @@ test('Add Remaining Leads', async ({ page }) => {
   const baseURL =
     'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/';
 
-  // Jack Arjun was already saved, so this starts with Jack Rahul.
+  // ADD YOUR ORIGINAL REMAINING LEAD DETAILS HERE.
+  // Each lead must contain:
+  // name, phone, profession, source, needs.
+
+  const leads = [
+    {
+      name: 'Jack Rahul',
+      phone: '9576501054',
+      profession: 'Self Employed',
+      source: 'Social Media',
+      needs: 'Savings'
+    },
+    {
+      name: 'Jack Karthik',
+      phone: '9676501032',
+      profession: 'Employed',
+      source: 'Social Media',
+      needs: 'Savings'
+    },
+    {
+      name: 'Jack Vikram',
+      phone: '9976501094',
+      profession: 'Employed',
+      source: 'Social Media',
+      needs: 'Savings'
+    },
+    {
+      name: 'Jack Praveen',
+      phone: '9076501026',
+      profession: 'Employed',
+      source: 'Social Media',
+      needs: 'Savings'
+    }
+  ];
 
   await page.goto(`${baseURL}lead`, {
     waitUntil: 'domcontentloaded',
@@ -39,7 +72,6 @@ test('Add Remaining Leads', async ({ page }) => {
       await searchInput.fill(value);
     }
 
-    // Locate the matching visible option, regardless of the option class.
     const option = page.getByText(value, {
       exact: true
     }).filter({
@@ -104,4 +136,3 @@ test('Add Remaining Leads', async ({ page }) => {
 
   console.log('All remaining leads processed.');
 });
-
