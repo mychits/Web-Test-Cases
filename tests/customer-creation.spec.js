@@ -6,13 +6,12 @@ const customers = require('../test-data/customers');
 // CONFIGURATION
 // ==========================================
 
-const BASE_URL =
-  'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/';
-
+const BASE_URL = process.env.BASE_URL;
 const CUSTOMER_URL = `${BASE_URL}customer-menu`;
 
-const ADMIN_ID = 'MCF-AD-1003';
-const OTP = '888889';
+const ADMIN_ID = process.env.ADMIN_ID;
+const OTP = process.env.OTP;
+const BRANCH_NAME = process.env.BRANCH_NAME;
 
 const PASSWORD =
   process.env.TEST_CUSTOMER_PASSWORD || 'Test@12345';
@@ -158,7 +157,7 @@ async function login(page) {
 
   // Select branch
   await page.locator('select').first().selectOption({
-    label: 'Test Not Main (CF-BR-2)'
+  label: BRANCH_NAME
   });
 
   // Enter Admin ID

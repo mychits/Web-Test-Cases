@@ -1,5 +1,9 @@
+node_modules/
 .env
 .env.*
 !.env.example
 test-results/
 playwright-report/
+group-creation-error.png
+group-confirmation-not-opened.png
+auth-state.json
