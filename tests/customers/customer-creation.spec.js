@@ -4,23 +4,18 @@ require('dotenv').config();
 const { test, expect } = require('@playwright/test');
 const customers = require('../../test-data/customers');
 
-// ========================================
+// =====================================
 // CONFIGURATION
-// ========================================
+// =====================================
 
 const BASE_URL = process.env.BASE_URL;
 const ADMIN_ID = process.env.ADMIN_ID;
 const OTP = process.env.OTP;
 const BRANCH_NAME = process.env.BRANCH_NAME;
 
-const COUNTRY =
-  process.env.CUSTOMER_COUNTRY || 'India';
-
-const STATE =
-  process.env.CUSTOMER_STATE || 'Karnataka';
-
-const DISTRICT =
-  process.env.CUSTOMER_DISTRICT || 'Bengaluru Urban';
+const COUNTRY = process.env.CUSTOMER_COUNTRY || 'India';
+const STATE = process.env.CUSTOMER_STATE || 'Karnataka';
+const DISTRICT = process.env.CUSTOMER_DISTRICT || 'Bengaluru Urban';
 
 const PASSWORD =
   process.env.TEST_CUSTOMER_PASSWORD || 'Test@12345';
@@ -28,8 +23,7 @@ const PASSWORD =
 const COLLECTION_AREA =
   process.env.CUSTOMER_COLLECTION_AREA || '';
 
-const CRM =
-  process.env.CUSTOMER_CRM || '';
+const CRM = process.env.CUSTOMER_CRM || '';
 
 for (const [key, value] of Object.entries({
   BASE_URL,
@@ -50,27 +44,27 @@ const CUSTOMER_URL =
 const ADD_URL =
   new URL('customer-menu/add-customer', ROOT_URL).href;
 
-// ========================================
-// COMMON HELPERS
-// ========================================
+// =====================================
+// HELPERS
+// =====================================
 
 async function isVisible(locator) {
-  return locator.first()
-    .isVisible()
-    .catch(() => false);
+  return locator.first().isVisible().catch(() => false);
+}
+
+function normalizeText(value) {
+  return String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 }
 
 function escapeRegex(value) {
-  return String(value)
-    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function fillOptional(locator, value) {
-  if (
-    value === undefined ||
-    value === null ||
-    value === ''
-  ) {
+  if (value === undefined || value === null || value === '') {
     return;
   }
 
@@ -91,20 +85,11 @@ async function closeBlockingPopup(page) {
 
   if (await isVisible(dismiss)) {
     await dismiss.click();
-
-    await expect(overlay).toBeHidden({
-      timeout: 10000
-    });
+    await expect(overlay).toBeHidden();
   }
 }
 
-// ========================================
-// VERIFY CURRENT FORM STEP
-// ========================================
-
 async function verifyActiveStep(page, expectedStep) {
-  await page.bringToFront();
-
   const main = page.locator('main');
 
   const basic = await isVisible(
@@ -112,16 +97,14 @@ async function verifyActiveStep(page, expectedStep) {
   );
 
   const address = await isVisible(
-    main.getByPlaceholder(
-      'Enter Street, Building, Area'
-    )
+    main.getByPlaceholder('Enter Street, Building, Area')
   );
 
   const additional = await isVisible(
     main.getByPlaceholder('Enter Family Code')
   );
 
-  const actualStep = additional
+  const actual = additional
     ? 'Additional & Payment'
     : address
       ? 'Address Details'
@@ -129,137 +112,157 @@ async function verifyActiveStep(page, expectedStep) {
         ? 'Basic Details'
         : 'Unknown';
 
-  console.log(
-    `[Page Check] Expected: ${expectedStep}, ` +
-    `Actual: ${actualStep}`
-  );
+  console.log(`[Step] ${actual}`);
 
-  if (actualStep !== expectedStep) {
+  if (actual !== expectedStep) {
     throw new Error(
-      `Expected ${expectedStep}, found ${actualStep}. ` +
-      `URL: ${page.url()}`
+      `Expected "${expectedStep}", found "${actual}". URL: ${page.url()}`
     );
   }
 }
 
-// ========================================
-// COMMON ANT DESIGN OPTION SELECTION
-// ========================================
+// =====================================
+// DROPDOWN SELECTION
+// CLICK ONLY - NO TYPING
+// =====================================
 
-async function chooseAntOption(
-  page,
-  select,
-  optionText,
-  fieldName
-) {
-  await expect(select).toBeVisible({
-    timeout: 15000
-  });
+
+async function chooseAntOption(page, select, optionText, fieldName) {
+  await expect(select).toBeVisible({ timeout: 15000 });
 
   await expect(select).not.toHaveClass(
     /ant-select-disabled/,
     { timeout: 15000 }
   );
 
-  const selected = select.locator(
-    '.ant-select-selection-item'
-  );
+  const desired = normalizeText(optionText);
+  const selected = select.locator('.ant-select-selection-item');
 
   if (await isVisible(selected)) {
-    const current = (
-      await selected.innerText()
-    ).trim();
+    const current = await selected.innerText();
 
-    if (
-      current.toLowerCase() ===
-      String(optionText).trim().toLowerCase()
-    ) {
+    if (normalizeText(current) === desired) {
       console.log(
-        `[Dropdown] ${fieldName} already selected: ` +
-        optionText
+        `[Dropdown] Already selected ${fieldName}: ${optionText}`
       );
-
       return;
     }
   }
 
   await select.scrollIntoViewIfNeeded();
-
-  await select.locator(
-    '.ant-select-selector'
-  ).click();
+  await select.locator('.ant-select-selector').click();
 
   const popup = page.locator(
     '.ant-select-dropdown:visible'
   ).last();
 
-  await expect(popup).toBeVisible({
-    timeout: 15000
-  });
+  await expect(popup).toBeVisible({ timeout: 15000 });
 
-  const exactOption = new RegExp(
-    `^\\s*${escapeRegex(optionText)}\\s*$`,
-    'i'
+  const options = popup.locator(
+    '.ant-select-item-option:not(.ant-select-item-option-disabled)'
   );
 
-  const option = popup.locator(
-    '.ant-select-item-option'
-  ).filter({
-    hasText: exactOption
-  });
-
-  if (!(await isVisible(option))) {
-    const searchInput = select.locator(
-      'input[role="combobox"]'
-    );
-
-    if (
-      (await isVisible(searchInput)) &&
-      (await searchInput.isEditable())
-    ) {
-      await searchInput.fill(String(optionText));
-    }
-  }
-
-  try {
-    await expect(option.first()).toBeVisible({
-      timeout: 15000
-    });
-  } catch {
-    const available = await popup.locator(
-      '.ant-select-item-option'
-    ).allTextContents().catch(() => []);
-
-    throw new Error(
-      `Cannot select "${optionText}" in ${fieldName}. ` +
-      `Available: ${JSON.stringify(available)}`
-    );
-  }
-
-  await option.first().click();
-
-  await expect(
-    select.locator('.ant-select-selection-item')
-  ).toContainText(String(optionText), {
+  await expect(options.first()).toBeVisible({
     timeout: 15000
   });
+
+  const matchingOption = options.filter({
+    hasText: new RegExp(
+      `^\\s*${escapeRegex(optionText)}\\s*$`,
+      'i'
+    )
+  }).first();
+
+  // FIRST: Click the option immediately if it is visible.
+  if (await isVisible(matchingOption)) {
+    await matchingOption.click();
+
+    await expect.poll(
+      async () => normalizeText(
+        await selected.innerText().catch(() => '')
+      ),
+      { timeout: 15000 }
+    ).toBe(desired);
+
+    console.log(
+      `[Dropdown] Selected ${fieldName}: ${optionText}`
+    );
+    return;
+  }
+
+  // SECOND: Scroll only if the option is not rendered.
+  const holder = popup.locator(
+    '.rc-virtual-list-holder'
+  ).first();
+
+  if (!(await isVisible(holder))) {
+    throw new Error(
+      `Cannot find "${optionText}" in ${fieldName}. ` +
+      `Options: ${JSON.stringify(await options.allTextContents())}`
+    );
+  }
+
+  let found = false;
+
+  for (let attempt = 0; attempt < 60; attempt++) {
+    if (await isVisible(matchingOption)) {
+      await matchingOption.click();
+      found = true;
+      break;
+    }
+
+    const moved = await holder.evaluate(element => {
+      const previous = element.scrollTop;
+
+      element.scrollTop += Math.max(
+        100,
+        Math.floor(element.clientHeight * 0.7)
+      );
+
+      return element.scrollTop > previous;
+    });
+
+    if (!moved) break;
+
+    // Wait for virtualized dropdown options to update.
+    await expect.poll(
+      async () => {
+        const texts = await options.allTextContents();
+        return texts.some(
+          text => normalizeText(text) === desired
+        );
+      },
+      {
+        timeout: 1500,
+        intervals: [100, 200, 300]
+      }
+    ).toBe(true).catch(() => {});
+  }
+
+  if (!found && await isVisible(matchingOption)) {
+    await matchingOption.click();
+    found = true;
+  }
+
+  if (!found) {
+    throw new Error(
+      `Cannot select "${optionText}" in ${fieldName}. ` +
+      `Visible options: ${JSON.stringify(await options.allTextContents())}`
+    );
+  }
+
+  await expect.poll(
+    async () => normalizeText(
+      await selected.innerText().catch(() => '')
+    ),
+    { timeout: 15000 }
+  ).toBe(desired);
 
   console.log(
     `[Dropdown] Selected ${fieldName}: ${optionText}`
   );
 }
 
-// ========================================
-// ADDRESS DROPDOWNS
-// ========================================
-
-// Address step:
-// 0 Communication Country
-// 1 Communication State
-// 2 Communication District
-// 3 Permanent Country
-// 4 Permanent State
-// 5 Permanent District
 
 async function selectAddressDropdown(
   page,
@@ -267,13 +270,7 @@ async function selectAddressDropdown(
   optionText,
   fieldName
 ) {
-  console.log(
-    `[Address] Selecting ${fieldName}: ${optionText}`
-  );
-
-  const select = page.locator(
-    'main .ant-select'
-  ).nth(index);
+  const select = page.locator('main .ant-select').nth(index);
 
   await chooseAntOption(
     page,
@@ -283,127 +280,59 @@ async function selectAddressDropdown(
   );
 }
 
-// ========================================
-// STEP 3 DROPDOWNS - LABEL BASED
-// ========================================
-
 async function selectOtherDropdown(
   page,
   fieldLabel,
   optionText
 ) {
-  console.log(
-    `[Dropdown] ${fieldLabel} -> ${optionText}`
-  );
+  const placeholders = {
+    'Referred Type': 'Select Referred Type',
+    'Collection Area': 'Select Or Search Collection Area',
+    'Customer Relationship Manager': 'Select Or Search CRM'
+  };
 
-  await page.bringToFront();
+  const placeholderText = placeholders[fieldLabel];
 
-  const label = page.locator('main').getByText(
-    fieldLabel,
-    { exact: true }
-  ).first();
-
-  await expect(label).toBeVisible({
-    timeout: 15000
-  });
-
-  // Find the nearest container that includes
-  // this label and its dropdown.
-  const container = label.locator(
-    'xpath=ancestor::*[.//input or .//*[@role="combobox"]][1]'
-  );
-
-  const select = container.locator(
-    '.ant-select, [role="combobox"]'
-  ).first();
-
-  await expect(select).toBeVisible({
-    timeout: 15000
-  });
-
-  const currentValue = (
-    await select.innerText()
-  ).trim();
-
-  if (
-    currentValue.toLowerCase() ===
-    String(optionText).trim().toLowerCase()
-  ) {
-    console.log(
-      `[Dropdown] Already selected: ${optionText}`
-    );
-
-    return;
+  if (!placeholderText) {
+    throw new Error(`Unknown dropdown: ${fieldLabel}`);
   }
 
-  await select.scrollIntoViewIfNeeded();
+  const selects = page.locator('main .ant-select');
 
-  await select.click();
-
-  const option = page.getByRole('option', {
-    name: optionText,
-    exact: true
-  }).first();
-
-  const antOption = page.locator(
-    '.ant-select-dropdown:visible .ant-select-item-option'
-  ).filter({
-    hasText: new RegExp(
-      `^\\s*${escapeRegex(optionText)}\\s*$`,
-      'i'
+  const matchingSelect = selects.filter({
+    has: page.locator(
+      '.ant-select-selection-placeholder',
+      { hasText: placeholderText }
     )
   }).first();
 
-  if (await isVisible(option)) {
-    await option.click();
-  } else {
-    // Some dropdowns need search text before
-    // the required option becomes available.
-    if (!(await isVisible(antOption))) {
-      const searchInput = select.locator(
-        'input[role="combobox"]'
-      );
+  await expect(matchingSelect).toBeVisible({
+    timeout: 15000
+  });
 
-      if (
-        (await isVisible(searchInput)) &&
-        (await searchInput.isEditable())
-      ) {
-        await searchInput.fill(String(optionText));
-      }
-    }
+  const index = await matchingSelect.evaluate(element => {
+    const all = Array.from(
+      document.querySelectorAll('main .ant-select')
+    );
 
-    try {
-      await expect(antOption).toBeVisible({
-        timeout: 15000
-      });
-    } catch {
-      const available = await page.locator(
-        '.ant-select-dropdown:visible .ant-select-item-option'
-      ).allTextContents().catch(() => []);
+    return all.indexOf(element);
+  });
 
-      throw new Error(
-        `Cannot select "${optionText}" for ` +
-        `"${fieldLabel}". Available: ` +
-        JSON.stringify(available)
-      );
-    }
-
-    await antOption.click();
+  if (index < 0) {
+    throw new Error(`Cannot locate ${fieldLabel}`);
   }
 
-  await expect(select).toContainText(
-    String(optionText),
-    { timeout: 15000 }
-  );
-
-  console.log(
-    `[Dropdown] Selected ${fieldLabel}: ${optionText}`
+  await chooseAntOption(
+    page,
+    selects.nth(index),
+    optionText,
+    fieldLabel
   );
 }
 
-// ========================================
+// =====================================
 // LOGIN ONCE
-// ========================================
+// =====================================
 
 async function login(page) {
   await page.goto(ROOT_URL, {
@@ -416,15 +345,13 @@ async function login(page) {
   });
 
   if (!(await isVisible(loginHeading))) {
-    console.log('Existing login session detected');
+    console.log('[Login] Existing session detected');
     return;
   }
 
-  await page.locator('select')
-    .first()
-    .selectOption({
-      label: BRANCH_NAME
-    });
+  await page.locator('select').first().selectOption({
+    label: BRANCH_NAME
+  });
 
   await page.getByPlaceholder('XXX-XX-XXXX')
     .fill(ADMIN_ID);
@@ -451,16 +378,14 @@ async function login(page) {
     await otpInputs.first().fill(String(OTP));
   } else if (count === 6) {
     if (String(OTP).length !== 6) {
-      throw new Error('Expected six-digit OTP');
+      throw new Error('Expected a six-digit OTP');
     }
 
     for (let i = 0; i < 6; i++) {
       await otpInputs.nth(i).fill(String(OTP)[i]);
     }
   } else {
-    throw new Error(
-      `Unexpected OTP input count: ${count}`
-    );
+    throw new Error(`Unexpected OTP input count: ${count}`);
   }
 
   await page.getByRole('button', {
@@ -473,20 +398,17 @@ async function login(page) {
 
   await closeBlockingPopup(page);
 
-  console.log('Login successful');
+  console.log('[Login] Successful');
 }
 
-// ========================================
+// =====================================
 // CUSTOMER MANAGEMENT
-// ========================================
+// =====================================
 
 async function openCustomerManagement(page) {
   const path = new URL(page.url()).pathname;
 
-  if (
-    path !== '/customer-menu' &&
-    path !== '/customer-menu/'
-  ) {
+  if (path !== '/customer-menu' && path !== '/customer-menu/') {
     await page.goto(CUSTOMER_URL, {
       waitUntil: 'domcontentloaded',
       timeout: 60000
@@ -503,30 +425,20 @@ async function openCustomerManagement(page) {
     timeout: 30000
   });
 
-  console.log('Customer Management opened');
+  await expect(page).toHaveURL(
+    /\/customer-menu\/?$/
+  );
+
+  console.log('[Navigation] Customer Management opened');
 }
 
 async function openAddCustomer(page) {
   await openCustomerManagement(page);
 
-  await page.getByRole('button', {
-    name: /add customer/i
-  }).click();
-
-  try {
-    await expect(
-      page.getByPlaceholder('First Name')
-    ).toBeVisible({
-      timeout: 7000
-    });
-  } catch {
-    console.log('Opening Add Customer directly');
-
-    await page.goto(ADD_URL, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60000
-    });
-  }
+  await page.goto(ADD_URL, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000
+  });
 
   await expect(
     page.getByPlaceholder('First Name')
@@ -534,7 +446,7 @@ async function openAddCustomer(page) {
     timeout: 30000
   });
 
-  console.log('Add Customer form opened');
+  console.log('[Navigation] Add Customer opened');
 }
 
 async function clickContinue(page) {
@@ -542,35 +454,23 @@ async function clickContinue(page) {
     name: /save\s*&\s*continue/i
   });
 
-  await expect(button).toBeEnabled({
-    timeout: 15000
-  });
-
+  await expect(button).toBeEnabled();
   await button.click();
 }
 
-// ========================================
+// =====================================
 // STEP 1: BASIC DETAILS
-// ========================================
+// =====================================
 
 async function fillBasicDetails(page, customer) {
-  console.log('Filling Basic Details...');
+  const parts = String(customer.name).trim().split(/\s+/);
 
-  const parts = String(customer.name)
-    .trim()
-    .split(/\s+/);
-
-  const firstName =
-    customer.firstName || parts[0];
-
+  const firstName = customer.firstName || parts[0];
   const lastName =
-    customer.lastName ||
-    parts.slice(1).join(' ');
+    customer.lastName || parts.slice(1).join(' ');
 
   if (!firstName || !lastName) {
-    throw new Error(
-      `Invalid name: ${customer.name}`
-    );
+    throw new Error(`Invalid customer name: ${customer.name}`);
   }
 
   await page.getByPlaceholder('First Name')
@@ -597,8 +497,8 @@ async function fillBasicDetails(page, customer) {
   );
 
   if (
-    (await isVisible(password)) &&
-    (await password.isEditable())
+    await isVisible(password) &&
+    await password.isEditable()
   ) {
     await password.fill(PASSWORD);
   }
@@ -621,43 +521,34 @@ async function fillBasicDetails(page, customer) {
     page.getByPlaceholder(
       'Enter Street, Building, Area'
     ).first()
-  ).toBeVisible({
-    timeout: 30000
-  });
+  ).toBeVisible({ timeout: 30000 });
 
-  console.log('Basic Details completed');
+  console.log('[Step 1] Basic Details completed');
 }
 
-// ========================================
+// =====================================
 // STEP 2: ADDRESS DETAILS
-// ========================================
+// =====================================
 
 async function fillAddressDetails(page, customer) {
-  console.log('Filling Address Details...');
-
-  const addressFields = page.getByPlaceholder(
+  const fields = page.getByPlaceholder(
     'Enter Street, Building, Area'
   );
 
-  await expect(addressFields).toHaveCount(2, {
-    timeout: 15000
-  });
+  await expect(fields).toHaveCount(2);
 
   const address =
-    customer.communicationAddress ||
-    customer.address;
+    customer.communicationAddress || customer.address;
 
-  await addressFields.nth(0)
-    .fill(String(address));
+  if (!address) {
+    throw new Error(`Missing address for ${customer.name}`);
+  }
 
-  const country =
-    customer.country || COUNTRY;
+  await fields.nth(0).fill(String(address));
 
-  const state =
-    customer.state || STATE;
-
-  const district =
-    customer.district || DISTRICT;
+  const country = customer.country || COUNTRY;
+  const state = customer.state || STATE;
+  const district = customer.district || DISTRICT;
 
   await selectAddressDropdown(
     page, 0, country, 'Communication Country'
@@ -676,10 +567,6 @@ async function fillAddressDetails(page, customer) {
   });
 
   if (customer.sameAsCommunicationAddress !== false) {
-    await expect(sameAddress).toBeVisible({
-      timeout: 15000
-    });
-
     await sameAddress.check();
   } else {
     if (!customer.permanentAddress) {
@@ -688,7 +575,7 @@ async function fillAddressDetails(page, customer) {
       );
     }
 
-    await addressFields.nth(1).fill(
+    await fields.nth(1).fill(
       String(customer.permanentAddress)
     );
 
@@ -709,44 +596,30 @@ async function fillAddressDetails(page, customer) {
 
   await expect(
     page.getByPlaceholder('Enter Family Code')
-  ).toBeVisible({
-    timeout: 30000
-  });
+  ).toBeVisible({ timeout: 30000 });
 
-  console.log('Address Details completed');
+  console.log('[Step 2] Address Details completed');
 }
 
-// ========================================
+// =====================================
 // STEP 3: ADDITIONAL & PAYMENT
-// ========================================
+// =====================================
 
 async function fillAdditionalDetails(page, customer) {
-  console.log('Filling Additional & Payment...');
-
-  await verifyActiveStep(
-    page,
-    'Additional & Payment'
-  );
-
   await fillOptional(
     page.getByPlaceholder('Enter Family Code'),
     customer.familyCode
   );
 
-  // Referred Type is a required field.
   await selectOtherDropdown(
     page,
     'Referred Type',
     customer.referredType || 'Self Joining'
   );
 
-  const area =
-    customer.collectionArea || COLLECTION_AREA;
+  const area = customer.collectionArea || COLLECTION_AREA;
+  const crm = customer.crm || CRM;
 
-  const crm =
-    customer.crm || CRM;
-
-  // Optional fields.
   if (area) {
     await selectOtherDropdown(
       page,
@@ -766,151 +639,228 @@ async function fillAdditionalDetails(page, customer) {
   const frequency =
     customer.paymentFrequency || 'Daily';
 
-  const frequencyRadio = page.getByRole('radio', {
+  const radio = page.getByRole('radio', {
     name: new RegExp(
       `^${escapeRegex(frequency)}$`,
       'i'
     )
   });
 
-  await expect(frequencyRadio).toBeVisible({
+  await expect(radio).toBeVisible();
+
+  await radio.check();
+  await expect(radio).toBeChecked();
+
+  const amountPlaceholders = {
+    Daily: 'Enter daily amount',
+    Weekly: 'Enter weekly amount',
+    Monthly: 'Enter monthly amount'
+  };
+
+  const amountPlaceholder =
+    amountPlaceholders[frequency];
+
+  if (!amountPlaceholder) {
+    throw new Error(
+      `Unsupported payment frequency: ${frequency}`
+    );
+  }
+
+  const amount = String(
+    customer.installmentAmount ?? 200
+  );
+
+  const amountField = page.getByPlaceholder(
+    amountPlaceholder
+  );
+
+  await expect(amountField).toBeVisible({
     timeout: 15000
   });
 
-  if (!(await frequencyRadio.isChecked())) {
-    await frequencyRadio.check();
-  }
-
-  await expect(frequencyRadio).toBeChecked();
+  await amountField.fill(amount);
+  await expect(amountField).toHaveValue(amount);
 
   console.log(
-    `[Payment] Selected frequency: ${frequency}`
+    `[Step 3] ${frequency} installment: ${amount}`
   );
-
-  // The amount field is not shown in the
-  // current screenshot. Fill only if present.
-  const amountField = page.getByPlaceholder(
-    'Enter daily amount'
-  );
-
-  if (await isVisible(amountField)) {
-    const amount = String(
-      customer.installmentAmount ?? 200
-    );
-
-    await amountField.fill(amount);
-
-    await expect(amountField).toHaveValue(amount);
-
-    console.log(
-      `[Payment] Installment amount: ${amount}`
-    );
-  } else {
-    console.log(
-      '[Payment] No daily amount field displayed'
-    );
-  }
-
-  console.log('Additional & Payment completed');
 }
 
-// ========================================
-// SAVE CUSTOMER AND CONFIRM
-// ========================================
-
+// =====================================
+// SAVE CUSTOMER
+// FIXED SUCCESS / ERROR DETECTION
+// =====================================
 async function saveCustomer(page, customer) {
-  console.log(
-    `[Save] Saving ${customer.name}`
-  );
+  console.log(`[Save] Saving ${customer.name}`);
 
   const saveButton = page.getByRole('button', {
     name: /^save customer$/i
   });
 
-  await expect(saveButton).toBeVisible({
+  await expect(saveButton).toBeVisible();
+  await expect(saveButton).toBeEnabled();
+
+  const successPattern =
+    /customer added successfully|customer created successfully/i;
+
+  const errorPattern =
+    /already exists|duplicate|invalid|failed|unable|required|error/i;
+
+  const getMessages = async () => {
+    const notifications = page.locator(
+      '.ant-message, ' +
+      '.ant-notification, ' +
+      '[role="alert"], ' +
+      '.ant-form-item-explain-error'
+    );
+
+    const texts = await notifications.allTextContents()
+      .catch(() => []);
+
+    return texts.map(text => text.trim()).filter(Boolean);
+  };
+
+  // Capture notifications before clicking Save.
+  const capturedMessages = [];
+
+  const captureMessages = async () => {
+    const texts = await getMessages();
+
+    for (const text of texts) {
+      if (!capturedMessages.includes(text)) {
+        capturedMessages.push(text);
+      }
+    }
+  };
+
+  await saveButton.click();
+  console.log('[Save] Save Customer clicked');
+
+  // Handle confirmation dialog if present.
+
+  // =========================================
+  // CONFIRM DETAILS POPUP
+  // =========================================
+
+  console.log('[Save] Waiting for Confirm Details popup');
+
+  // Locate the popup by its visible heading.
+  await expect(
+    page.getByText('Confirm Details', { exact: true })
+  ).toBeVisible({
     timeout: 15000
   });
 
-  await expect(saveButton).toBeEnabled();
+  console.log('[Save] Confirm Details popup opened');
 
-  await saveButton.click();
+  // The popup contains an Edit button and a Confirm button.
+  // Click the visible Confirm button.
+  const confirmButton = page.getByRole('button', {
+    name: /^confirm$/i,
+    exact: true
+  }).last();
 
-  console.log('[Save] Save Customer clicked');
+  await expect(confirmButton).toBeVisible({
+    timeout: 15000
+  });
 
-  const confirmation = page.locator(
-    '[role="dialog"]:visible, ' +
-    '.ant-modal:visible, ' +
-    '.ant-modal-confirm:visible, ' +
-    '[role="alertdialog"]:visible'
-  ).last();
+  await expect(confirmButton).toBeEnabled({
+    timeout: 15000
+  });
 
-  const confirmName =
-    /^(confirm|yes|yes, save|proceed|ok|okay)$/i;
+  await confirmButton.click();
 
-  const confirmationVisible = await confirmation
-    .waitFor({
-      state: 'visible',
-      timeout: 5000
-    })
-    .then(() => true)
-    .catch(() => false);
+  console.log('[Save] Confirm button clicked');
 
-  if (confirmationVisible) {
-    const confirmButton = confirmation.getByRole(
-      'button',
-      { name: confirmName }
-    ).first();
-
-    await expect(confirmButton).toBeVisible({
-      timeout: 10000
-    });
-
-    await confirmButton.click();
-
-    console.log('[Save] Confirm button clicked');
-  } else {
-    const confirmButton = page.getByRole('button', {
-      name: confirmName
-    }).last();
-
-    if (await isVisible(confirmButton)) {
-      await confirmButton.click();
-
-      console.log('[Save] Confirm button clicked');
-    } else {
-      console.log(
-        '[Save] No separate confirmation detected'
-      );
-    }
-  }
-
-  // Wait for the form to close after saving.
+  // Wait until the confirmation popup closes.
   await expect(
-    page.getByPlaceholder('Enter Family Code')
+    page.getByText('Confirm Details', { exact: true })
   ).toBeHidden({
     timeout: 30000
   });
 
-  const errorMessage = page.locator(
-    '.ant-message-error:visible, ' +
-    '.ant-notification-notice-error:visible, ' +
-    '[role="alert"]:visible'
-  ).filter({
-    hasText: /failed|error|unable|duplicate|already exists/i
-  });
+  console.log('[Save] Confirm Details popup closed');
 
-  if (await isVisible(errorMessage)) {
+   let status = 'pending';
+
+  try {
+    await expect.poll(
+      async () => {
+        await captureMessages();
+
+        // Also inspect visible page text in case
+        // notifications use custom components.
+        const bodyText = await page.locator('body')
+          .innerText()
+          .catch(() => '');
+
+        const allText = [
+          ...capturedMessages,
+          bodyText
+        ].join('\n');
+
+        if (successPattern.test(allText)) {
+          status = 'saved';
+          return status;
+        }
+
+        const failures = capturedMessages.filter(
+          message => errorPattern.test(message)
+        );
+
+        if (failures.length > 0) {
+          status = 'failed';
+          return status;
+        }
+
+        return 'pending';
+      },
+      {
+        timeout: 30000,
+        intervals: [250, 500, 1000]
+      }
+    ).not.toBe('pending');
+  } catch (error) {
+    const currentUrl = page.url();
+
+    const bodyText = await page.locator('body')
+      .innerText()
+      .catch(() => '');
+
+    console.error('[Save] Current URL:', currentUrl);
+    console.error('[Save] Messages:', capturedMessages);
+    console.error('[Save] Page text:', bodyText.slice(-3000));
+
+    await page.screenshot({
+      path: 'customer-save-failed.png',
+      fullPage: true
+    }).catch(() => {});
+
     throw new Error(
-      `Save failed for ${customer.name}: ` +
-      await errorMessage.first().innerText()
+      `Unable to confirm save for ${customer.name}. ` +
+      `URL: ${currentUrl}. ` +
+      `Messages: ${JSON.stringify(capturedMessages)}`
+    );
+  }
+
+  if (status === 'failed') {
+    throw new Error(
+      `Customer save failed for ${customer.name}: ` +
+      capturedMessages.join(' | ')
+    );
+  }
+
+  if (status !== 'saved') {
+    throw new Error(
+      `Customer save not confirmed for ${customer.name}`
     );
   }
 
   console.log(
-    `[Save] Form closed for ${customer.name}`
+    `[Save] Customer added successfully: ${customer.name}`
   );
 
-  // Return to Customer Management, not Leads.
+  // Return to Customer Management.
   await openCustomerManagement(page);
 
   await expect(page).toHaveURL(
@@ -918,14 +868,12 @@ async function saveCustomer(page, customer) {
   );
 
   console.log(
-    '[Save] Returned to Customer Management'
+    '[Navigation] Returned to Customer Management'
   );
 }
-
-// ========================================
-// MAIN TEST: CREATE ALL 10 CUSTOMERS
-// ========================================
-
+// =====================================
+// MAIN TEST
+// =====================================
 test(
   'Login once and create 10 customers sequentially',
   async ({ page, context }) => {
@@ -941,27 +889,16 @@ test(
     try {
       await page.bringToFront();
 
-      // Login only once.
       await login(page);
+      await openCustomerManagement(page);
 
-      console.log(
-        `[Browser] Playwright controls: ${page.url()}`
-      );
-
-      // Create 10 customers sequentially.
       for (let i = 0; i < customers.length; i++) {
         const customer = customers[i];
 
         await test.step(
           `Customer ${i + 1}: ${customer.name}`,
           async () => {
-            await page.bringToFront();
-
-            console.log(
-              `Creating customer ${i + 1}/10: ` +
-              customer.name
-            );
-
+            await openCustomerManagement(page);
             await openAddCustomer(page);
 
             await verifyActiveStep(
@@ -983,54 +920,48 @@ test(
               'Additional & Payment'
             );
 
-            await fillAdditionalDetails(
-              page,
-              customer
-            );
+            await fillAdditionalDetails(page, customer);
 
-            await verifyActiveStep(
-              page,
-              'Additional & Payment'
-            );
-
-            // Save, confirm, return to list.
             await saveCustomer(page, customer);
+
+            await expect(page).toHaveURL(
+              /\/customer-menu\/?$/
+            );
+
+            await expect(
+              page.getByRole('button', {
+                name: /add customer/i
+              })
+            ).toBeVisible();
 
             completed++;
 
             console.log(
-              `[Progress] ${completed}/10 ` +
-              'customer save flows completed'
+              `[Success] Customer created ${completed}/10: ${customer.name}`
             );
           }
         );
       }
 
-      // Finish on Customer Management.
       await openCustomerManagement(page);
-      await page.bringToFront();
 
       console.log(
-        `Finished ${completed}/10 customer save flows`
+        `[Completed] ${completed}/10 customer save flows completed`
       );
     } catch (error) {
       console.error(
-        `Stopped after ${completed}/10 save flows`
+        `[Error] Stopped after ${completed}/10 customers`
       );
 
       console.error(
-        '[Browser] Active URL:',
+        '[Error] Current URL:',
         page.url()
       );
 
       console.error(
-        '[Browser] Open pages:',
+        '[Error] Open pages:',
         context.pages().map(p => p.url())
       );
-
-      console.error(error);
-
-      await page.bringToFront().catch(() => {});
 
       await page.screenshot({
         path: 'customer-creation-error.png',
