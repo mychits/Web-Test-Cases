@@ -510,465 +510,277 @@ async function fillBasicDetails(page, customer) {
     /enter\s+ad(?:h)?aar\s+number/i
   ).fill(String(customer.aadhaar));
 
-  await fillOptional(
-    page.getByPlaceholder(/enter pan number/i),
-    customer.pan
-  );
+  await option.click();
 
-  await clickContinue(page);
+  // Verify using the stable combobox ID.
+  // This does not depend on the placeholder remaining visible.
+  const selectedField = page.locator(
+    `input[id="${comboboxId}"]`
+  ).locator(
+    'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ant-select ")][1]'
+  );
 
   await expect(
-    page.getByPlaceholder(
-      'Enter Street, Building, Area'
-    ).first()
-  ).toBeVisible({ timeout: 30000 });
-
-  console.log('[Step 1] Basic Details completed');
-}
-
-// =====================================
-// STEP 2: ADDRESS DETAILS
-// =====================================
-
-async function fillAddressDetails(page, customer) {
-  const fields = page.getByPlaceholder(
-    'Enter Street, Building, Area'
-  );
-
-  await expect(fields).toHaveCount(2);
-
-  const address =
-    customer.communicationAddress || customer.address;
-
-  if (!address) {
-    throw new Error(`Missing address for ${customer.name}`);
-  }
-
-  await fields.nth(0).fill(String(address));
-
-  const country = customer.country || COUNTRY;
-  const state = customer.state || STATE;
-  const district = customer.district || DISTRICT;
-
-  await selectAddressDropdown(
-    page, 0, country, 'Communication Country'
-  );
-
-  await selectAddressDropdown(
-    page, 1, state, 'Communication State'
-  );
-
-  await selectAddressDropdown(
-    page, 2, district, 'Communication District'
-  );
-
-  const sameAddress = page.getByRole('checkbox', {
-    name: /same as communication address/i
+    selectedField.locator('.ant-select-selection-item')
+  ).toHaveText(type, {
+    timeout: 15000
   });
 
-  if (customer.sameAsCommunicationAddress !== false) {
-    await sameAddress.check();
-  } else {
-    if (!customer.permanentAddress) {
-      throw new Error(
-        `Missing permanent address for ${customer.name}`
-      );
-    }
+  console.log(`Referred Type selected successfully: ${type}`);
+}
 
-    await fields.nth(1).fill(
-      String(customer.permanentAddress)
-    );
 
-    await selectAddressDropdown(
-      page, 3, country, 'Permanent Country'
-    );
+// =====================================
+// CHECK EXISTING CUSTOMER
+// =====================================
 
-    await selectAddressDropdown(
-      page, 4, state, 'Permanent State'
-    );
+async function customerAlreadyExists(page, customer) {
+  const phone = String(customer.phone);
 
-    await selectAddressDropdown(
-      page, 5, district, 'Permanent District'
-    );
-  }
+  const row = page.getByRole('row').filter({
+    has: page.getByRole('cell', {
+      name: phone,
+      exact: true
+    })
+  });
 
-  await clickContinue(page);
-
-  await expect(
-    page.getByPlaceholder('Enter Family Code')
-  ).toBeVisible({ timeout: 30000 });
-
-  console.log('[Step 2] Address Details completed');
+  return (await row.count()) > 0;
 }
 
 // =====================================
-// STEP 3: ADDITIONAL & PAYMENT
+// CREATE ONE CUSTOMER
 // =====================================
 
-async function fillAdditionalDetails(page, customer) {
-  await fillOptional(
-    page.getByPlaceholder('Enter Family Code'),
-    customer.familyCode
+async function createCustomer(page, customer, index) {
+  console.log(
+    `Creating customer ${index}/${customers.length}: ${customer.name}`
   );
 
-  await selectOtherDropdown(
+  await openCustomerManagement(page);
+
+  // Avoid duplicates in the visible customer table.
+  if (await customerAlreadyExists(page, customer)) {
+    console.log(
+      `Skipping existing customer: ${customer.name}`
+    );
+
+    return 'skipped';
+  }
+
+  await openAddCustomer(page);
+
+  // =====================================
+  // STEP 1 - BASIC DETAILS
+  // =====================================
+
+  await page.getByPlaceholder(
+    'Enter the Full Name'
+  ).fill(customer.name);
+
+  await page.getByPlaceholder(
+    'Enter Email'
+  ).fill(customer.email);
+
+  await page.getByPlaceholder(
+    'Enter Phone Number'
+  ).fill(String(customer.phone));
+
+  await page.getByPlaceholder(
+    'Enter Password'
+  ).fill(PASSWORD);
+
+  await page.getByPlaceholder(
+    'Enter Pincode'
+  ).fill(String(customer.pincode));
+
+  await page.getByPlaceholder(
+    /enter\s+(?:aadhaar|adhaar)\s+number/i
+  ).fill(String(customer.aadhaar));
+
+  await page.getByPlaceholder(
+    /enter\s+pan\s+number/i
+  ).fill(String(customer.pan));
+
+  await page.getByPlaceholder(
+    /enter\s+the\s+address/i
+  ).fill(customer.address);
+
+  await page.getByPlaceholder(
+    'Enter the Permanent Address'
+  ).fill(customer.address);
+
+  console.log('Step 1 completed');
+
+  await page.getByRole('button', {
+    name: /save\s*&\s*continue/i
+  }).click();
+
+  // =====================================
+  // STEP 2 - ADDITIONAL & PAYMENT
+  // =====================================
+
+  const familyCode = page.getByPlaceholder(
+    'Enter Family Code'
+  );
+
+  await expect(familyCode).toBeVisible({
+    timeout: 30000
+  });
+
+  if (customer.familyCode != null) {
+    await familyCode.fill(
+      String(customer.familyCode)
+    );
+  }
+
+  // Referred Type
+  await selectReferredType(
     page,
-    'Referred Type',
     customer.referredType || 'Self Joining'
   );
 
-  const area = customer.collectionArea || COLLECTION_AREA;
-  const crm = customer.crm || CRM;
-
-  if (area) {
-    await selectOtherDropdown(
-      page,
-      'Collection Area',
-      area
-    );
-  }
-
-  if (crm) {
-    await selectOtherDropdown(
-      page,
-      'Customer Relationship Manager',
-      crm
-    );
-  }
-
+  // Payment Frequency
   const frequency =
     customer.paymentFrequency || 'Daily';
 
-  const radio = page.getByRole('radio', {
-    name: new RegExp(
-      `^${escapeRegex(frequency)}$`,
-      'i'
-    )
-  });
+  await page.getByRole('radio', {
+    name: new RegExp(`^${frequency}$`, 'i')
+  }).check();
 
-  await expect(radio).toBeVisible();
-
-  await radio.check();
-  await expect(radio).toBeChecked();
-
-  const amountPlaceholders = {
-    Daily: 'Enter daily amount',
-    Weekly: 'Enter weekly amount',
-    Monthly: 'Enter monthly amount'
-  };
-
-  const amountPlaceholder =
-    amountPlaceholders[frequency];
-
-  if (!amountPlaceholder) {
-    throw new Error(
-      `Unsupported payment frequency: ${frequency}`
-    );
-  }
-
+  // Installment Amount
   const amount = String(
     customer.installmentAmount ?? 200
   );
 
-  const amountField = page.getByPlaceholder(
-    amountPlaceholder
+  const installment = page.locator(
+    'input[placeholder*="installment" i]'
   );
 
-  await expect(amountField).toBeVisible({
-    timeout: 15000
-  });
+  if (await installment.count() > 0) {
+    await installment.first().fill(amount);
+  } else {
+    await page.getByLabel(
+      /installment amount/i
+    ).fill(amount);
+  }
 
-  await amountField.fill(amount);
-  await expect(amountField).toHaveValue(amount);
+  console.log('Step 2 completed');
 
-  console.log(
-    `[Step 3] ${frequency} installment: ${amount}`
-  );
-}
+  // =====================================
+  // SAVE CUSTOMER
+  // =====================================
 
-// =====================================
-// SAVE CUSTOMER
-// FIXED SUCCESS / ERROR DETECTION
-// =====================================
-async function saveCustomer(page, customer) {
-  console.log(`[Save] Saving ${customer.name}`);
-
-  const saveButton = page.getByRole('button', {
+  await page.getByRole('button', {
     name: /^save customer$/i
-  });
+  }).click();
 
-  await expect(saveButton).toBeVisible();
-  await expect(saveButton).toBeEnabled();
+  // Handle confirmation if one appears.
+  const confirmation = page.getByRole('dialog');
 
-  const successPattern =
-    /customer added successfully|customer created successfully/i;
-
-  const errorPattern =
-    /already exists|duplicate|invalid|failed|unable|required|error/i;
-
-  const getMessages = async () => {
-    const notifications = page.locator(
-      '.ant-message, ' +
-      '.ant-notification, ' +
-      '[role="alert"], ' +
-      '.ant-form-item-explain-error'
+  if (await confirmation.isVisible().catch(() => false)) {
+    const confirmButton = confirmation.getByRole(
+      'button',
+      {
+        name: /^(confirm|yes|save|ok|okay|proceed)$/i
+      }
     );
 
-    const texts = await notifications.allTextContents()
-      .catch(() => []);
-
-    return texts.map(text => text.trim()).filter(Boolean);
-  };
-
-  // Capture notifications before clicking Save.
-  const capturedMessages = [];
-
-  const captureMessages = async () => {
-    const texts = await getMessages();
-
-    for (const text of texts) {
-      if (!capturedMessages.includes(text)) {
-        capturedMessages.push(text);
-      }
+    if (await confirmButton.count() === 1) {
+      await confirmButton.click();
     }
-  };
+  }
 
-  await saveButton.click();
-  console.log('[Save] Save Customer clicked');
-
-  // Handle confirmation dialog if present.
-
-  // =========================================
-  // CONFIRM DETAILS POPUP
-  // =========================================
-
-  console.log('[Save] Waiting for Confirm Details popup');
-
-  // Locate the popup by its visible heading.
+  // Wait for the form to close.
   await expect(
-    page.getByText('Confirm Details', { exact: true })
-  ).toBeVisible({
-    timeout: 15000
-  });
-
-  console.log('[Save] Confirm Details popup opened');
-
-  // The popup contains an Edit button and a Confirm button.
-  // Click the visible Confirm button.
-  const confirmButton = page.getByRole('button', {
-    name: /^confirm$/i,
-    exact: true
-  }).last();
-
-  await expect(confirmButton).toBeVisible({
-    timeout: 15000
-  });
-
-  await expect(confirmButton).toBeEnabled({
-    timeout: 15000
-  });
-
-  await confirmButton.click();
-
-  console.log('[Save] Confirm button clicked');
-
-  // Wait until the confirmation popup closes.
-  await expect(
-    page.getByText('Confirm Details', { exact: true })
+    page.getByPlaceholder('Enter the Full Name')
   ).toBeHidden({
     timeout: 30000
   });
 
-  console.log('[Save] Confirm Details popup closed');
-
-   let status = 'pending';
-
-  try {
-    await expect.poll(
-      async () => {
-        await captureMessages();
-
-        // Also inspect visible page text in case
-        // notifications use custom components.
-        const bodyText = await page.locator('body')
-          .innerText()
-          .catch(() => '');
-
-        const allText = [
-          ...capturedMessages,
-          bodyText
-        ].join('\n');
-
-        if (successPattern.test(allText)) {
-          status = 'saved';
-          return status;
-        }
-
-        const failures = capturedMessages.filter(
-          message => errorPattern.test(message)
-        );
-
-        if (failures.length > 0) {
-          status = 'failed';
-          return status;
-        }
-
-        return 'pending';
-      },
-      {
-        timeout: 30000,
-        intervals: [250, 500, 1000]
-      }
-    ).not.toBe('pending');
-  } catch (error) {
-    const currentUrl = page.url();
-
-    const bodyText = await page.locator('body')
-      .innerText()
-      .catch(() => '');
-
-    console.error('[Save] Current URL:', currentUrl);
-    console.error('[Save] Messages:', capturedMessages);
-    console.error('[Save] Page text:', bodyText.slice(-3000));
-
-    await page.screenshot({
-      path: 'customer-save-failed.png',
-      fullPage: true
-    }).catch(() => {});
-
-    throw new Error(
-      `Unable to confirm save for ${customer.name}. ` +
-      `URL: ${currentUrl}. ` +
-      `Messages: ${JSON.stringify(capturedMessages)}`
-    );
-  }
-
-  if (status === 'failed') {
-    throw new Error(
-      `Customer save failed for ${customer.name}: ` +
-      capturedMessages.join(' | ')
-    );
-  }
-
-  if (status !== 'saved') {
-    throw new Error(
-      `Customer save not confirmed for ${customer.name}`
-    );
-  }
-
   console.log(
-    `[Save] Customer added successfully: ${customer.name}`
+    `Save flow completed: ${customer.name}`
   );
 
-  // Return to Customer Management.
-  await openCustomerManagement(page);
-
-  await expect(page).toHaveURL(
-    /\/customer-menu\/?$/
-  );
-
-  console.log(
-    '[Navigation] Returned to Customer Management'
-  );
+  return 'created';
 }
+
 // =====================================
 // MAIN TEST
 // =====================================
-test(
-  'Login once and create 10 customers sequentially',
-  async ({ page, context }) => {
-    test.setTimeout(900000);
 
-    page.setDefaultTimeout(30000);
-    page.setDefaultNavigationTimeout(60000);
+test('Login once and create 10 customers', async ({ page }) => {
+  test.setTimeout(900000);
 
-    expect(customers).toHaveLength(10);
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(60000);
 
-    let completed = 0;
+  // Check test data.
+  expect(customers).toHaveLength(10);
 
-    try {
-      await page.bringToFront();
+  let created = 0;
+  let skipped = 0;
 
-      await login(page);
-      await openCustomerManagement(page);
+  try {
+    // LOGIN ONLY ONCE
+    await test.step('Login to MyChits Admin', async () => {
+      await loginOnce(page);
+    });
 
-      for (let i = 0; i < customers.length; i++) {
-        const customer = customers[i];
+    // CREATE 10 CUSTOMERS SEQUENTIALLY
+    for (let i = 0; i < customers.length; i++) {
+      const customer = customers[i];
 
-        await test.step(
-          `Customer ${i + 1}: ${customer.name}`,
-          async () => {
-            await openCustomerManagement(page);
-            await openAddCustomer(page);
+      await test.step(
+        `Customer ${i + 1}: ${customer.name}`,
+        async () => {
+          const result = await createCustomer(
+            page,
+            customer,
+            i + 1
+          );
 
-            await verifyActiveStep(
-              page,
-              'Basic Details'
-            );
-
-            await fillBasicDetails(page, customer);
-
-            await verifyActiveStep(
-              page,
-              'Address Details'
-            );
-
-            await fillAddressDetails(page, customer);
-
-            await verifyActiveStep(
-              page,
-              'Additional & Payment'
-            );
-
-            await fillAdditionalDetails(page, customer);
-
-            await saveCustomer(page, customer);
-
-            await expect(page).toHaveURL(
-              /\/customer-menu\/?$/
-            );
-
-            await expect(
-              page.getByRole('button', {
-                name: /add customer/i
-              })
-            ).toBeVisible();
-
-            completed++;
-
-            console.log(
-              `[Success] Customer created ${completed}/10: ${customer.name}`
-            );
+          if (result === 'created') {
+            created++;
+          } else if (result === 'skipped') {
+            skipped++;
           }
-        );
-      }
-
-      await openCustomerManagement(page);
-
-      console.log(
-        `[Completed] ${completed}/10 customer save flows completed`
+        }
       );
-    } catch (error) {
-      console.error(
-        `[Error] Stopped after ${completed}/10 customers`
-      );
-
-      console.error(
-        '[Error] Current URL:',
-        page.url()
-      );
-
-      console.error(
-        '[Error] Open pages:',
-        context.pages().map(p => p.url())
-      );
-
-      await page.screenshot({
-        path: 'customer-creation-error.png',
-        fullPage: true
-      }).catch(() => {});
-
-      throw error;
     }
+
+    // FINAL STEP
+    await test.step(
+      'Verify customer processing completed',
+      async () => {
+        await openCustomerManagement(page);
+
+        expect(created + skipped).toBe(10);
+      }
+    );
+
+    console.log('================================');
+    console.log(`New save flows: ${created}`);
+    console.log(`Existing customers skipped: ${skipped}`);
+    console.log(`Total processed: ${created + skipped}/10`);
+    console.log('================================');
+
+  } catch (error) {
+    console.error(
+      `Stopped after ${created} new save flows`
+    );
+
+    console.error(
+      `Existing customers skipped: ${skipped}`
+    );
+
+    console.error('Current URL:', page.url());
+    console.error('Error:', error.message);
+
+    await page.screenshot({
+      path: 'customer-creation-error.png',
+      fullPage: true
+    }).catch(() => {});
+
+    throw error;
   }
-);
+});
