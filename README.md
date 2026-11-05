@@ -128,13 +128,13 @@ npx playwright install chromium
 ## 3. Run Login Automation
 
 ```bash
-npx playwright test tests/auth/1.LoginAutomation.spec.js --project=chromium --headed --workers=1
+npx playwright test tests/auth/LoginAutomation.spec.js --project=chromium --headed --workers=1
 ```
 
 ## 4. Run Five Leads Automation
 
 ```bash
-npx playwright test tests/auth/leads.spec.js --project=chromium --headed --workers=1
+npx playwright test tests/auth/LeadsAdd.spec.js --project=chromium --headed --workers=1
 ```
 
 ## 5. Run All Automation Tests
@@ -158,7 +158,38 @@ npx playwright show-report
 ## 8. Run Login Automation in Debug Mode
 
 ```bash
-npx playwright test tests/auth/1.LoginAutomation.spec.js --project=chromium --debug
+npx playwright test tests/auth/LoginAutomation.spec.js --project=chromium --debug
+```
+
+## 9.Lead Delete Auomation
+
+```bash
+npx playwright test tests/auth/LeadsDelete.spec.js --project=chromium --headed --workers=1
+
+```
+
+## Playwright Automation Run Commands For Agents
+
+# 1. Run Agent Add Test
+npx playwright test tests/auth/AgentAdd.spec.js --project=chromium --headed --workers=1
+
+# 2. Run Agent Delete Test
+npx playwright test tests/auth/AgentDelete.spec.js --project=chromium --headed --workers=1
+
+# 3. Check Git Changes
+git status
+# 4. Add README File
+git add README.md
+
+# 5. Commit Changes
+git commit -m "Add Agent Add and Delete automation documentation"
+
+# 6. Push Changes to GitHub
+git push origin main
+
+# 7. Verify Git Status
+git status
+
 ```
 
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.

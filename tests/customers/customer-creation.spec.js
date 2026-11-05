@@ -337,7 +337,7 @@ async function selectOtherDropdown(
 async function login(page) {
   await page.goto(ROOT_URL, {
     waitUntil: 'domcontentloaded',
-    timeout: 60000
+    timeout: 45000
   });
 
   const loginHeading = page.getByRole('heading', {
