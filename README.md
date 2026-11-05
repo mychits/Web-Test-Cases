@@ -191,6 +191,16 @@ git push origin main
 git status
 
 ```
+```
+
+## Playwright Automation Run Commands For Employees 
+
+## 1. Run Employee Add Test
+npx playwright test tests/auth/EmployeeAdd.spec.js --project=chromium --headed --workers=1
+
+## 2. Run Employee Delete Test
+npx playwright test tests/auth/EmployeeDelete.spec.js --project=chromium --headed --workers=1
+
 
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
 
