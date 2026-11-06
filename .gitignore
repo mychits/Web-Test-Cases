@@ -1,9 +1,71 @@
+
+# =====================================
+# NODE MODULES
+# =====================================
 node_modules/
+
+# =====================================
+# ENVIRONMENT FILES
+# =====================================
 .env
 .env.*
 !.env.example
-test-results/
+
+# =====================================
+# PLAYWRIGHT REPORTS
+# =====================================
 playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# =====================================
+# SCREENSHOTS AND IMAGES
+# =====================================
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# =====================================
+# PLAYWRIGHT VIDEOS AND TRACES
+# =====================================
+*.webm
+*.trace
+trace.zip
+
+# =====================================
+# EXISTING ERROR SCREENSHOTS
+# =====================================
 group-creation-error.png
 group-confirmation-not-opened.png
+enrollment-creation-error.png
+enrollment-submit-unconfirmed.png
+customer-creation-error.png
+customer-create-failed.png
+
+# =====================================
+# AUTHENTICATION FILES
+# =====================================
 auth-state.json
+playwright/.auth/
+
+# =====================================
+# DEBUG AND LOG FILES
+# =====================================
+*.log
+npm-debug.log*
+debug.log
+
+# =====================================
+# TEMPORARY FILES
+# =====================================
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# =====================================
+# IDE LOCAL SETTINGS
+# =====================================
+.vscode/.history/
