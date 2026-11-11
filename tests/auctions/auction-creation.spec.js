@@ -3,9 +3,9 @@ require('dotenv').config();
 
 const { test, expect } = require('@playwright/test');
 
-// ==========================================
-// ENVIRONMENT CONFIGURATION
-// ==========================================
+// ======================================
+// ENVIRONMENT VARIABLES
+// ======================================
 
 const BASE_URL = process.env.BASE_URL;
 const ADMIN_ID = process.env.ADMIN_ID;
@@ -21,44 +21,42 @@ const NEXT_AUCTION_TIME = process.env.NEXT_AUCTION_TIME;
 const ENABLE_SUBMIT =
   process.env.ENABLE_AUCTION_SUBMIT === 'true';
 
-if (!BASE_URL || !ADMIN_ID || !OTP || !BRANCH_NAME) {
-  throw new Error(
-    'Missing login configuration in .env'
-  );
-}
-
-if (
-  !AUCTION_GROUP ||
-  !AUCTION_DATE ||
-  !AUCTION_TIME ||
-  !NEXT_AUCTION_DATE ||
-  !NEXT_AUCTION_TIME
-) {
-  throw new Error(
-    'Missing auction configuration in .env'
-  );
-}
-
-const ROOT_URL = BASE_URL.replace(/\/+$/, '') + '/';
-
-const AUCTION_URL = new URL(
-  'auction',
-  ROOT_URL
-).href;
-
 test.setTimeout(180000);
 
-// ==========================================
-// GENERAL HELPER
-// ==========================================
+const ROOT_URL = (BASE_URL || '').replace(/\/+$/, '');
+const AUCTION_URL = `${ROOT_URL}/auction`;
 
-async function isVisible(locator) {
-  return locator.first().isVisible().catch(() => false);
+// ======================================
+// VALIDATE CONFIGURATION
+// ======================================
+
+function validateConfig() {
+  const required = {
+    BASE_URL,
+    ADMIN_ID,
+    OTP,
+    BRANCH_NAME,
+    AUCTION_GROUP,
+    AUCTION_DATE,
+    AUCTION_TIME,
+    NEXT_AUCTION_DATE,
+    NEXT_AUCTION_TIME
+  };
+
+  const missing = Object.entries(required)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  if (missing.length) {
+    throw new Error(
+      `Missing .env values: ${missing.join(', ')}`
+    );
+  }
 }
 
-// ==========================================
-// STEP 1: ADMIN LOGIN
-// ==========================================
+// ======================================
+// LOGIN
+// ======================================
 
 async function login(page) {
   console.log('Opening MyChits Admin');
@@ -72,52 +70,28 @@ async function login(page) {
     name: /admin login/i
   });
 
-  if (!(await isVisible(loginHeading))) {
-    console.log(
-      'Login form not displayed; checking session'
-    );
-
-    await page.goto(AUCTION_URL, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60000
-    });
-
-    const auctionButton = page.getByRole('button', {
-      name: /add auction/i
-    });
-
-    if (await isVisible(auctionButton)) {
-      console.log('Existing login session detected');
-      return;
-    }
-
-    throw new Error(
-      'Admin login form and Auctions page are not visible. ' +
-      'Check the current page and authentication state.'
-    );
+  if (!(await loginHeading.isVisible().catch(() => false))) {
+    console.log('Login page not displayed');
+    return;
   }
 
   console.log('Admin Login page opened');
 
-  // Select branch.
   await page.locator('select').first().selectOption({
     label: BRANCH_NAME
   });
 
   console.log(`Branch selected: ${BRANCH_NAME}`);
 
-  // Enter Admin ID.
   await page.getByPlaceholder('XXX-XX-XXXX')
     .fill(ADMIN_ID);
 
-  // Request OTP.
   await page.getByRole('button', {
     name: /send otp/i
   }).click();
 
   console.log('OTP requested');
 
-  // Locate OTP inputs.
   const otpInputs = page.locator(
     'input[autocomplete="one-time-code"], ' +
     'input[name*="otp" i], ' +
@@ -136,9 +110,7 @@ async function login(page) {
     await otpInputs.first().fill(String(OTP));
   } else if (count === 6) {
     if (String(OTP).length !== 6) {
-      throw new Error(
-        'OTP must contain exactly six digits'
-      );
+      throw new Error('OTP must contain 6 digits');
     }
 
     for (let i = 0; i < 6; i++) {
@@ -150,7 +122,6 @@ async function login(page) {
     );
   }
 
-  // Complete login.
   await page.getByRole('button', {
     name: /verify otp|verify|login|submit/i
   }).last().click();
@@ -162,9 +133,9 @@ async function login(page) {
   console.log('Admin login successful');
 }
 
-// ==========================================
-// STEP 2: OPEN AUCTIONS PAGE
-// ==========================================
+// ======================================
+// OPEN AUCTIONS
+// ======================================
 
 async function openAuctions(page) {
   await page.goto(AUCTION_URL, {
@@ -172,57 +143,46 @@ async function openAuctions(page) {
     timeout: 60000
   });
 
-  const addAuctionButton = page.getByRole('button', {
+  const addAuction = page.getByRole('button', {
     name: /add auction/i
   });
 
-  await expect(addAuctionButton).toBeVisible({
+  await expect(addAuction).toBeVisible({
     timeout: 30000
   });
 
   console.log('Auctions page opened');
 }
 
-// ==========================================
-// STEP 3: OPEN ADD AUCTION FORM
-// ==========================================
+// ======================================
+// OPEN ADD AUCTION
+// ======================================
 
 async function openAddAuction(page) {
-  const addAuctionButton = page.getByRole('button', {
+  await page.getByRole('button', {
     name: /add auction/i
-  });
+  }).click();
 
-  await addAuctionButton.click();
-
-  const saveButton = page.getByRole('button', {
-    name: /^save auction$/i
-  });
-
-  await expect(saveButton).toBeVisible({
-    timeout: 15000
-  });
-
-  // Scope to the closest container holding
-  // the Save Auction button and Add Auction title.
-  const modal = saveButton.locator(
-    'xpath=ancestor::div[' +
-    './/*[normalize-space(text())="Add Auction"]' +
-    '][1]'
-  );
+  const modal = page.locator('#modal-wrapper');
 
   await expect(modal).toBeVisible({
     timeout: 15000
   });
+
+  await expect(
+    modal.getByRole('button', {
+      name: /save auction/i
+    })
+  ).toBeVisible();
 
   console.log('Add Auction form opened');
 
   return modal;
 }
 
-// ==========================================
-// STEP 4: SELECT AUCTION GROUP
-// ==========================================
-
+// ======================================
+// SELECT AUCTION GROUP
+// ======================================
 async function selectAuctionGroup(page, modal) {
   console.log(`Selecting Group: ${AUCTION_GROUP}`);
 
@@ -235,76 +195,108 @@ async function selectAuctionGroup(page, modal) {
   });
 
   await groupInput.click();
-
   await groupInput.fill(AUCTION_GROUP);
 
-  const option = page.getByText(
-    AUCTION_GROUP,
-    { exact: true }
-  ).filter({
-    visible: true
-  }).last();
+  console.log('Group search text entered');
 
-  await expect(option).toBeVisible({
-    timeout: 15000
+  // Search inside common dropdown containers.
+  // Do not click a matching group in the background table.
+  const dropdownOptions = page.locator(
+    '.ant-select-dropdown:visible .ant-select-item-option, ' +
+    '[role="listbox"]:visible [role="option"], ' +
+    '[cmdk-item]:visible, ' +
+    '[data-radix-popper-content-wrapper] [role="option"]'
+  ).filter({
+    hasText: AUCTION_GROUP
   });
 
-  await option.click();
+  // Wait for the options to load.
+  try {
+    await expect(dropdownOptions.first()).toBeVisible({
+      timeout: 10000
+    });
+  } catch {
+    console.log(
+      'Standard dropdown option not found. ' +
+      'Inspecting visible modal elements.'
+    );
+
+    const details = await modal.evaluate(element => {
+      return Array.from(
+        element.querySelectorAll('*')
+      )
+        .filter(node => {
+          const text = node.textContent?.trim() || '';
+
+          return (
+            text.includes('QA-AUTO-GROUP') &&
+            node.getClientRects().length > 0
+          );
+        })
+        .slice(-15)
+        .map(node => ({
+          tag: node.tagName,
+          className:
+            typeof node.className === 'string'
+              ? node.className
+              : '',
+          text: node.textContent?.trim().slice(0, 150),
+          html: node.outerHTML.slice(0, 500)
+        }));
+    });
+
+    console.log(
+      'GROUP DROPDOWN HTML:',
+      JSON.stringify(details, null, 2)
+    );
+
+    throw new Error(
+      'Group dropdown structure is not supported by ' +
+      'the current locator. See GROUP DROPDOWN HTML.'
+    );
+  }
+
+  const matchingCount = await dropdownOptions.count();
+
+  if (matchingCount !== 1) {
+    throw new Error(
+      `Expected one matching Group option, ` +
+      `found ${matchingCount}.`
+    );
+  }
+
+  await dropdownOptions.first().click();
 
   console.log(
     `Group selected successfully: ${AUCTION_GROUP}`
   );
 
-  // Check auto-populated fields.
-  const groupValue = modal.getByText(
-    /group value/i
-  ).first();
+  await expect(
+    modal.getByText(/group value/i).first()
+  ).toBeVisible();
 
-  const groupInstallment = modal.getByText(
-    /group installment/i
-  ).first();
-
-  await expect(groupValue).toBeVisible();
-  await expect(groupInstallment).toBeVisible();
-
-  console.log(
-    'Group Value and Group Installment fields displayed'
-  );
+  await expect(
+    modal.getByText(/group installment/i).first()
+  ).toBeVisible();
 }
 
-// ==========================================
-// STEP 5: FILL AUCTION DATES AND TIMES
-// ==========================================
+// ======================================
+// FILL AUCTION DATE AND TIME
+// ======================================
 
 async function fillAuctionSchedule(modal) {
   console.log('Entering auction schedule');
 
-  const dateInputs = modal.locator(
-    'input[type="date"]'
-  );
+  const dateInputs = modal.locator('input[type="date"]');
+  const timeInputs = modal.locator('input[type="time"]');
 
-  const timeInputs = modal.locator(
-    'input[type="time"]'
-  );
+  await expect(dateInputs).toHaveCount(2);
+  await expect(timeInputs).toHaveCount(2);
 
-  await expect(dateInputs).toHaveCount(2, {
-    timeout: 15000
-  });
-
-  await expect(timeInputs).toHaveCount(2, {
-    timeout: 15000
-  });
-
-  // Current auction date.
   await dateInputs.nth(0).fill(AUCTION_DATE);
-
-  // Current auction time.
   await timeInputs.nth(0).fill(AUCTION_TIME);
 
-  // Next auction date.
   await dateInputs.nth(1).fill(NEXT_AUCTION_DATE);
-
-  // Next auction time.
   await timeInputs.nth(1).fill(NEXT_AUCTION_TIME);
 
   await expect(dateInputs.nth(0))
@@ -319,93 +311,104 @@ async function fillAuctionSchedule(modal) {
   await expect(timeInputs.nth(1))
     .toHaveValue(NEXT_AUCTION_TIME);
 
-  console.log('Auction Date:', AUCTION_DATE);
-  console.log('Auction Time:', AUCTION_TIME);
-  console.log('Next Auction Date:', NEXT_AUCTION_DATE);
-  console.log('Next Auction Time:', NEXT_AUCTION_TIME);
-
   console.log('Auction schedule entered successfully');
 }
 
-// ==========================================
-// STEP 6: SAVE AUCTION
-// ==========================================
+// ======================================
+// SAVE AUCTION
+// ======================================
 
-async function saveAuction(page, modal) {
-  const saveButton = modal.getByRole('button', {
-    name: /^save auction$/i
-  });
-
-  await expect(saveButton).toBeVisible({
-    timeout: 15000
-  });
-
-  await expect(saveButton).toBeEnabled();
-
+async function saveAuction(modal) {
   if (!ENABLE_SUBMIT) {
+    console.log('[DRY RUN] Auction form completed');
     console.log(
-      '[DRY RUN] Auction form completed.'
+      'Set ENABLE_AUCTION_SUBMIT=true to save'
     );
-
-    console.log(
-      'Set ENABLE_AUCTION_SUBMIT=true in .env ' +
-      'to save the auction.'
-    );
-
     return false;
   }
 
   console.log('Clicking Save Auction');
 
+  const saveButton = modal.getByRole('button', {
+    name: /save auction/i
+  });
+
+  await expect(saveButton).toBeEnabled();
+
   await saveButton.click();
 
-  await expect(saveButton).toBeHidden({
+  await expect(modal).toBeHidden({
     timeout: 30000
   });
 
-  console.log(
-    'Save Auction completed; form closed'
-  );
+  console.log('Save Auction completed; form closed');
 
   return true;
 }
 
-// ==========================================
-// STEP 7: VERIFY AUCTION
-// ==========================================
+// ======================================
+// VERIFY AUCTION
+// ======================================
 
 async function verifyAuction(page) {
-  console.log('Verifying created auction');
+  console.log('Checking auction creation result');
 
-  // Reload the Auctions page.
   await openAuctions(page);
 
-  // Search the displayed auction list for the group.
   const table = page.locator('table').first();
 
   await expect(table).toBeVisible({
     timeout: 30000
   });
 
-  const groupCell = table.getByText(
-    AUCTION_GROUP,
-    { exact: true }
-  ).first();
+  const rows = table.locator('tbody tr');
+  const count = await rows.count();
 
-  await expect(groupCell).toBeVisible({
-    timeout: 30000
-  });
+  console.log(`Visible auction rows: ${count}`);
 
-  console.log(
-    `Auction group found in list: ${AUCTION_GROUP}`
+  const matchingRows = [];
+
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+    const text = await row.innerText();
+
+    if (
+      text.includes(AUCTION_GROUP) &&
+      text.includes(AUCTION_DATE)
+    ) {
+      matchingRows.push(text);
+    }
+  }
+
+  if (matchingRows.length === 1) {
+    console.log(
+      'Auction found in the displayed list:',
+      matchingRows[0]
+    );
+
+    console.log('Auction creation verified');
+    return;
+  }
+
+  if (matchingRows.length > 1) {
+    throw new Error(
+      'Multiple auctions match the group and date. ' +
+      'An exact Auction Code is required.'
+    );
+  }
+
+  throw new Error(
+    'Auction not found in the currently displayed table. ' +
+    'The Save Auction action may have succeeded, ' +
+    'but creation is not verified. ' +
+    'Check the selected group and full auction list ' +
+    'before rerunning.'
   );
-
-  console.log('Auction creation verification completed');
 }
 
-// ==========================================
+// ======================================
 // COMPLETE AUCTION CREATION WORKFLOW
-// ==========================================
+// ======================================
 
 async function createAuction(page) {
   await openAuctions(page);
@@ -416,43 +419,36 @@ async function createAuction(page) {
 
   await fillAuctionSchedule(modal);
 
-  const saved = await saveAuction(page, modal);
+  const saved = await saveAuction(modal);
 
   if (saved) {
     await verifyAuction(page);
   }
+
+  console.log('Auction creation workflow completed');
 }
 
-// ==========================================
-// MAIN PLAYWRIGHT TEST
-// ==========================================
+// ======================================
+// MAIN TEST
+// ======================================
 
-test('Create Auction in MyChits Admin', async ({
-  page
-}) => {
+test('Create Auction in MyChits Admin', async ({ page }) => {
   page.setDefaultTimeout(15000);
   page.setDefaultNavigationTimeout(60000);
 
+  validateConfig();
+
   try {
-    // Login only once.
     await login(page);
 
-    // Execute auction creation.
     await createAuction(page);
-
-    console.log(
-      'Auction creation workflow completed'
-    );
   } catch (error) {
     console.error(
       'Auction creation failed:',
       error.message
     );
 
-    console.error(
-      'Current URL:',
-      page.url()
-    );
+    console.error('Current URL:', page.url());
 
     await page.screenshot({
       path: 'auction-creation-error.png',
