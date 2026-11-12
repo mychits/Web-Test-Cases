@@ -202,6 +202,17 @@ npx playwright test tests/auth/EmployeeAdd.spec.js --project=chromium --headed -
 npx playwright test tests/auth/EmployeeDelete.spec.js --project=chromium --headed --workers=1
 
 
+# Loan Add
+npx playwright test tests/auth/LoanAdd.spec.js --project=chromium --headed --workers=1
+
+# Guarantor Add
+npx playwright test tests/auth/GuarantorAdd.spec.js --project=chromium --headed --workers=1
+
+# Guarantor Delete
+npx playwright test tests/auth/GuarantorDelete.spec.js --project=chromium --headed --workers=1
+
+
+
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
 
 ## Customer Creation Test Scenario
