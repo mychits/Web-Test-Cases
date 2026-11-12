@@ -3,12 +3,31 @@ require('dotenv').config();
 
 const { expect } = require('@playwright/test');
 
-const BASE_URL = (process.env.BASE_URL || '').replace(/\/+$/, '');
+// -------------------------------------
+// Configuration
+// -------------------------------------
+
+const BASE_URL = (process.env.BASE_URL || '')
+  .trim()
+  .replace(/\/+$/, '');
+
 const LOANS_URL = `${BASE_URL}/other-service-menu/loan`;
 
-const PHONE = (process.env.LOAN_CUSTOMER_PHONE || '').trim();
-const CUSTOMER = (process.env.LOAN_CUSTOMER_NAME || '').trim();
-const LOAN_ID = (process.env.LOAN_TARGET_ID || '').trim();
+const PHONE = (
+  process.env.LOAN_CUSTOMER_PHONE || ''
+).trim();
+
+const CUSTOMER = (
+  process.env.LOAN_CUSTOMER_NAME || ''
+).trim();
+
+const LOAN_ID = (
+  process.env.LOAN_TARGET_ID || ''
+).trim();
+
+const EXPECTED_AMOUNT = (
+  process.env.LOAN_EXPECTED_AMOUNT || ''
+).trim();
 
 const ENABLE_UPDATE =
   process.env.ENABLE_LOAN_STATUS_UPDATE === 'true';
@@ -16,6 +35,7 @@ const ENABLE_UPDATE =
 // -------------------------------------
 // Validate environment variables
 // -------------------------------------
+
 function validateConfig() {
   const required = [
     'BASE_URL',
@@ -28,7 +48,9 @@ function validateConfig() {
 
   for (const key of required) {
     if (!String(process.env[key] || '').trim()) {
-      throw new Error(`Missing .env variable: ${key}`);
+      throw new Error(
+        `Missing .env variable: ${key}`
+      );
     }
   }
 }
@@ -36,6 +58,7 @@ function validateConfig() {
 // -------------------------------------
 // Login
 // -------------------------------------
+
 async function login(page) {
   console.log('Opening MyChits Admin');
 
@@ -48,15 +71,20 @@ async function login(page) {
     name: /admin login/i
   });
 
-  if (await loginHeading.isVisible().catch(() => false)) {
+  if (
+    await loginHeading.isVisible().catch(() => false)
+  ) {
     console.log('Admin Login page opened');
 
-    await page.locator('select').first().selectOption({
-      label: process.env.BRANCH_NAME
-    });
+    await page.locator('select')
+      .first()
+      .selectOption({
+        label: process.env.BRANCH_NAME
+      });
 
-    await page.getByPlaceholder('XXX-XX-XXXX')
-      .fill(process.env.ADMIN_ID);
+    await page.getByPlaceholder(
+      'XXX-XX-XXXX'
+    ).fill(process.env.ADMIN_ID);
 
     await page.getByRole('button', {
       name: /send otp/i
@@ -72,7 +100,9 @@ async function login(page) {
       'input[maxlength="6"]'
     );
 
-    await expect(otpInputs.first()).toBeVisible({
+    await expect(
+      otpInputs.first()
+    ).toBeVisible({
       timeout: 30000
     });
 
@@ -81,7 +111,10 @@ async function login(page) {
 
     if (count === 1) {
       await otpInputs.first().fill(otp);
-    } else if (count === 6 && otp.length === 6) {
+    } else if (
+      count === 6 &&
+      otp.length === 6
+    ) {
       for (let i = 0; i < 6; i++) {
         await otpInputs.nth(i).fill(otp[i]);
       }
@@ -106,6 +139,7 @@ async function login(page) {
 // -------------------------------------
 // Open Loans page
 // -------------------------------------
+
 async function openLoans(page) {
   await page.goto(LOANS_URL, {
     waitUntil: 'domcontentloaded',
@@ -116,7 +150,9 @@ async function openLoans(page) {
     page.getByRole('button', {
       name: /add loan/i
     })
-  ).toBeVisible({ timeout: 30000 });
+  ).toBeVisible({
+    timeout: 30000
+  });
 
   console.log('Loans page opened');
 }
@@ -124,6 +160,7 @@ async function openLoans(page) {
 // -------------------------------------
 // Select status tab
 // -------------------------------------
+
 async function selectTab(page, status) {
   const patterns = {
     Requested: /^Requests\b/i,
@@ -134,7 +171,9 @@ async function selectTab(page, status) {
   const pattern = patterns[status];
 
   if (!pattern) {
-    throw new Error(`Unsupported status: ${status}`);
+    throw new Error(
+      `Unsupported status: ${status}`
+    );
   }
 
   const tab = page.getByRole('tab', {
@@ -144,7 +183,8 @@ async function selectTab(page, status) {
   if (await tab.count() === 1) {
     await tab.click();
   } else {
-    const matches = page.getByText(pattern)
+    const matches = page
+      .getByText(pattern)
       .filter({ visible: true });
 
     await expect(matches).toHaveCount(1, {
@@ -158,7 +198,7 @@ async function selectTab(page, status) {
 }
 
 // -------------------------------------
-// Find correct loan table
+// Identify Loans table
 // -------------------------------------
 
 async function getLoanTable(page) {
@@ -178,7 +218,10 @@ async function getLoanTable(page) {
   for (let i = 0; i < count; i++) {
     const table = tables.nth(i);
 
-    const headers = await table.locator('thead th')
+    const headers = await table
+      .locator('thead tr')
+      .first()
+      .locator('th')
       .allTextContents();
 
     console.log(
@@ -186,19 +229,25 @@ async function getLoanTable(page) {
       headers
     );
 
-    const headerText = headers
-      .join(' ')
-      .toLowerCase();
+    const normalizedHeaders = headers.map(
+      header => header.trim().toLowerCase()
+    );
 
-    if (
-      headerText.includes('customer name') &&
-      headerText.includes('phone number')
-    ) {
-      console.log(`Loans table found: table ${i}`);
+    const hasBorrowerName =
+      normalizedHeaders.includes('customer name') ||
+      normalizedHeaders.includes('borrower name');
 
+    const hasPhone =
+      normalizedHeaders.includes('phone number');
+
+    if (hasBorrowerName && hasPhone) {
       await expect(table).toBeVisible({
         timeout: 15000
       });
+
+      console.log(
+        `Loans table found: table ${i}`
+      );
 
       return table;
     }
@@ -206,14 +255,19 @@ async function getLoanTable(page) {
 
   throw new Error(
     'Could not identify Loans table. ' +
-    'Check the table headers printed above.'
+    'Expected Customer Name or Borrower Name ' +
+    'and Phone Number columns.'
   );
 }
+
 // -------------------------------------
-// Search for the loan
+// Search and identify loan row
 // -------------------------------------
-async function findLoanRow(page) {
-  console.log(`Searching loan: ${CUSTOMER} (${PHONE})`);
+
+async function findLoanRow(page, tabName = '') {
+  console.log(
+    `Searching loan: ${CUSTOMER} (${PHONE})`
+  );
 
   const search = page.getByPlaceholder(
     /search by customer name or phone number/i
@@ -225,7 +279,8 @@ async function findLoanRow(page) {
 
   await search.fill(PHONE);
 
-  const searchButton = page.locator('button')
+  const searchButton = page
+    .locator('button')
     .filter({ hasText: /search/i })
     .filter({ visible: true });
 
@@ -243,53 +298,152 @@ async function findLoanRow(page) {
     timeout: 30000
   });
 
+  const headers = await table
+    .locator('thead tr')
+    .first()
+    .locator('th')
+    .allTextContents();
+
+  const normalizedHeaders = headers.map(
+    header => header.trim().toLowerCase()
+  );
+
+  const phoneIndex = normalizedHeaders.indexOf(
+    'phone number'
+  );
+
+  const nameIndex = normalizedHeaders.findIndex(
+    header =>
+      header === 'customer name' ||
+      header === 'borrower name'
+  );
+
+  const amountIndex = normalizedHeaders.findIndex(
+    header =>
+      header === 'loan amount' ||
+      header === 'loan amount requested'
+  );
+
   const rows = table.locator('tbody tr');
 
-  const matchingRows = rows
-    .filter({ hasText: PHONE })
-    .filter({ hasText: CUSTOMER });
-
-  
-const rowTexts = await rows.allInnerTexts();
-
-console.log(
-  'LOANS CURRENTLY DISPLAYED:',
-  JSON.stringify(rowTexts, null, 2)
-);
-
-const matchingCount = await matchingRows.count();
-
-console.log('Matching loans found:', matchingCount);
-
-if (matchingCount === 0) {
-  throw new Error(
-    `Loan not found in Requests tab for ` +
-    `${CUSTOMER} (${PHONE}). ` +
-    `Check whether the new loan was saved ` +
-    `and whether its status is Requested.`
+  console.log(
+    'LOANS CURRENTLY DISPLAYED:',
+    JSON.stringify(
+      await rows.allInnerTexts(),
+      null,
+      2
+    )
   );
-}
 
-if (matchingCount > 1) {
-  throw new Error(
-    `Found ${matchingCount} loans for ` +
-    `${CUSTOMER} (${PHONE}). ` +
-    `Cannot safely choose which loan to update.`
+  // Match the phone number in the correct table column.
+  const matchingRows = rows.filter({
+    has: page.locator('td')
+      .nth(phoneIndex)
+      .getByText(PHONE, { exact: true })
+  });
+
+  await expect.poll(
+    async () => matchingRows.count(),
+    { timeout: 15000 }
+  ).toBeGreaterThan(0);
+
+  const matchingCount = await matchingRows.count();
+
+  console.log(
+    'Matching loans found:',
+    matchingCount
   );
-}
 
+  if (matchingCount === 0) {
+    throw new Error(
+      `Loan not found for ${PHONE} ` +
+      `in ${tabName || 'selected'} tab.`
+    );
+  }
+
+  if (matchingCount > 1) {
+    throw new Error(
+      `Found ${matchingCount} loans for ${PHONE}. ` +
+      'Cannot safely identify a unique loan.'
+    );
+  }
 
   const row = matchingRows.first();
+
   const rowText = await row.innerText();
 
   console.log('Matching loan:', rowText);
 
-  // An optional loan ID can be verified if it is
-  // actually displayed in the table row.
+  // Verify borrower name if the application displays it.
+  if (nameIndex !== -1) {
+    const nameText = (
+      await row.locator('td')
+        .nth(nameIndex)
+        .innerText()
+    ).trim();
+
+    if (
+      nameText &&
+      !nameText.toLowerCase().includes(
+        CUSTOMER.toLowerCase()
+      )
+    ) {
+      throw new Error(
+        `Borrower name mismatch. ` +
+        `Expected: ${CUSTOMER}, ` +
+        `Displayed: ${nameText}`
+      );
+    }
+
+    if (!nameText) {
+      console.log(
+        'Borrower name is blank in this table. ' +
+        'Using phone number for identification.'
+      );
+    }
+  }
+
+  // Verify loan amount if configured.
+  if (EXPECTED_AMOUNT) {
+    if (amountIndex === -1) {
+      throw new Error(
+        'Loan amount column not found. ' +
+        'Cannot verify expected loan amount.'
+      );
+    }
+
+    const displayedAmount = (
+      await row.locator('td')
+        .nth(amountIndex)
+        .innerText()
+    ).replace(/[₹,\s]/g, '');
+
+    const expected = EXPECTED_AMOUNT.replace(
+      /[₹,\s]/g,
+      ''
+    );
+
+    if (
+      Number(displayedAmount) !== Number(expected)
+    ) {
+      throw new Error(
+        `Loan amount mismatch. ` +
+        `Expected: ${EXPECTED_AMOUNT}, ` +
+        `Displayed: ${displayedAmount}`
+      );
+    }
+
+    console.log(
+      'Loan amount verified:',
+      EXPECTED_AMOUNT
+    );
+  }
+
+  // Verify loan ID only when it is visible.
   if (LOAN_ID && !rowText.includes(LOAN_ID)) {
     throw new Error(
-      `Loan ID ${LOAN_ID} is not visible in the row. ` +
-      'The exact loan could not be verified. ' +
+      `Loan ID ${LOAN_ID} is not visible ` +
+      'in the matching row. ' +
       'No status will be changed.'
     );
   }
@@ -300,6 +454,7 @@ if (matchingCount > 1) {
 // -------------------------------------
 // Open Actions -> Update Status
 // -------------------------------------
+
 async function openStatusMenu(page, row, table) {
   console.log('Finding Actions control...');
 
@@ -310,20 +465,38 @@ async function openStatusMenu(page, row, table) {
     .allTextContents();
 
   const actionsIndex = headers.findIndex(
-    header => header.trim().toLowerCase() === 'actions'
+    header => {
+      const name = header.trim().toLowerCase();
+
+      return (
+        name === 'actions' ||
+        name === 'action'
+      );
+    }
   );
 
   if (actionsIndex === -1) {
-    throw new Error('Actions column not found');
+    throw new Error(
+      'Action/Actions column not found'
+    );
   }
 
-  const actionsCell = row.locator('td').nth(actionsIndex);
+  const actionsCell = row
+    .locator('td')
+    .nth(actionsIndex);
 
   await expect(actionsCell).toBeVisible({
     timeout: 10000
   });
 
-  // Actual Actions control from your application's HTML.
+  console.log(
+    'Actions cell HTML:',
+    await actionsCell.evaluate(
+      element => element.outerHTML
+    )
+  );
+
+  // Confirmed Actions selector from Requests tab.
   const actionsTrigger = actionsCell.locator(
     'svg.ant-dropdown-trigger'
   );
@@ -336,12 +509,16 @@ async function openStatusMenu(page, row, table) {
 
   await actionsTrigger.click();
 
-  console.log('Three-dot Actions menu clicked');
+  console.log(
+    'Three-dot Actions menu clicked'
+  );
 
-  // Ant Design dropdown menu.
   const updateStatus = page
     .locator('.ant-dropdown:visible')
-    .getByText('Update Status', { exact: true });
+    .getByText(
+      'Update Status',
+      { exact: true }
+    );
 
   await expect(updateStatus).toHaveCount(1, {
     timeout: 10000
@@ -353,14 +530,20 @@ async function openStatusMenu(page, row, table) {
 }
 
 // -------------------------------------
-// Change status
+// Change loan status
 // -------------------------------------
+
 async function changeStatus(page, source, target) {
-  console.log(`Preparing ${source} -> ${target}`);
+  console.log(
+    `Preparing ${source} -> ${target}`
+  );
 
   await selectTab(page, source);
 
-  const { row, table } = await findLoanRow(page);
+  const { row, table } = await findLoanRow(
+    page,
+    source
+  );
 
   await openStatusMenu(page, row, table);
 
@@ -376,20 +559,31 @@ async function changeStatus(page, source, target) {
     console.log(
       `[DRY RUN] Would change ${source} -> ${target}`
     );
-    console.log('No status has been changed');
+
+    console.log(
+      'No status has been changed'
+    );
+
     return;
   }
 
   await option.click();
 
-  console.log(`Clicked status: ${target}`);
+  console.log(
+    `Clicked status: ${target}`
+  );
 
   const destination =
-    target === 'Reject' ? 'Rejected' : target;
+    target === 'Reject'
+      ? 'Rejected'
+      : target;
 
   await selectTab(page, destination);
 
-  const updated = await findLoanRow(page);
+  const updated = await findLoanRow(
+    page,
+    destination
+  );
 
   console.log(
     `Loan verified under ${destination}:`,
@@ -398,8 +592,9 @@ async function changeStatus(page, source, target) {
 }
 
 // -------------------------------------
-// Export functions
+// Exports
 // -------------------------------------
+
 module.exports = {
   validateConfig,
   login,
