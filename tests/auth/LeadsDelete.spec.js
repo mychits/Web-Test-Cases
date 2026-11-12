@@ -13,10 +13,10 @@ test('Delete My Created Leads', async ({ page }) => {
     'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/';
 
   const leads = [
-    { name: 'Jack Rahul', phone: '9576501054' },
-    { name: 'Jack Karthik', phone: '9676501032' },
-    { name: 'Jack Vikram', phone: '9976501094' },
-    { name: 'Jack Praveen', phone: '9076501026' }
+    { name: 'Jack Rahul', phone: '9576501036' },
+    { name: 'Jack Karthik', phone: '9676501083' },
+    { name: 'Jack Vikram', phone: '9976501054' },
+    { name: 'Jack Praveen', phone: '9076501090' }
   ];
 
   // STEP 1: Open Leads page with saved login.
