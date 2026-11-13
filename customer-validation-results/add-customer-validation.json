@@ -1,0 +1,555 @@
+[
+  {
+    "field": "Full Name",
+    "test": "HTML constraints",
+    "input": "",
+    "observed": "INSPECTED",
+    "detail": "{\"tag\":\"INPUT\",\"type\":\"text\",\"name\":\"full_name\",\"required\":true,\"minLength\":-1,\"maxLength\":-1,\"min\":\"\",\"max\":\"\",\"pattern\":\"\",\"placeholder\":\"Enter the Full Name\",\"inputMode\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "Empty",
+    "input": "",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"\",\"length\":0,\"valid\":false,\"validity\":{\"valueMissing\":true,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"Please fill out this field.\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "One character",
+    "input": "A",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"A\",\"length\":1,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "Two characters",
+    "input": "Ab",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"Ab\",\"length\":2,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "10 characters",
+    "input": "AAAAAAAAAA",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"AAAAAAAAAA\",\"length\":10,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "50 characters",
+    "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"length\":50,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "100 characters",
+    "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"length\":100,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "255 characters",
+    "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA... (255 chars)",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"length\":255,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "256 characters",
+    "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA... (256 chars)",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"length\":256,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "Numbers only",
+    "input": "123456",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"123456\",\"length\":6,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "Letters and numbers",
+    "input": "Arun123",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"Arun123\",\"length\":7,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "Special characters",
+    "input": "@#$%",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"@#$%\",\"length\":4,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "Spaces only",
+    "input": "   ",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"   \",\"length\":3,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "Leading/trailing spaces",
+    "input": "  Arun Kumar  ",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"  Arun Kumar  \",\"length\":14,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Full Name",
+    "test": "Unicode letters",
+    "input": "தமிழ் பெயர்",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"தமிழ் பெயர்\",\"length\":11,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Email",
+    "test": "HTML constraints",
+    "input": "",
+    "observed": "INSPECTED",
+    "detail": "{\"tag\":\"INPUT\",\"type\":\"email\",\"name\":\"email\",\"required\":true,\"minLength\":-1,\"maxLength\":-1,\"min\":\"\",\"max\":\"\",\"pattern\":\"\",\"placeholder\":\"Enter Email\",\"inputMode\":\"\"}"
+  },
+  {
+    "field": "Email",
+    "test": "Empty",
+    "input": "",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"\",\"length\":0,\"valid\":false,\"validity\":{\"valueMissing\":true,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"Please fill out this field.\"}"
+  },
+  {
+    "field": "Email",
+    "test": "Valid email",
+    "input": "qa.validation@example.com",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"qa.validation@example.com\",\"length\":25,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Email",
+    "test": "Missing @",
+    "input": "testexample.com",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"testexample.com\",\"length\":15,\"valid\":false,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":true,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"Please include an '@' in the email address. 'testexample.com' is missing an '@'.\"}"
+  },
+  {
+    "field": "Email",
+    "test": "Missing domain",
+    "input": "test@",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"test@\",\"length\":5,\"valid\":false,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":true,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"Please enter a part following '@'. 'test@' is incomplete.\"}"
+  },
+  {
+    "field": "Email",
+    "test": "Spaces",
+    "input": "test user@example.com",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"test user@example.com\",\"length\":21,\"valid\":false,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":true,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"A part followed by '@' should not contain the symbol ' '.\"}"
+  },
+  {
+    "field": "Email",
+    "test": "Long email",
+    "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa... (112 chars)",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com\",\"length\":112,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Phone Number",
+    "test": "HTML constraints",
+    "input": "",
+    "observed": "INSPECTED",
+    "detail": "{\"tag\":\"INPUT\",\"type\":\"number\",\"name\":\"phone_number\",\"required\":true,\"minLength\":-1,\"maxLength\":-1,\"min\":\"\",\"max\":\"\",\"pattern\":\"\",\"placeholder\":\"Enter Phone Number\",\"inputMode\":\"\"}"
+  },
+  {
+    "field": "Phone Number",
+    "test": "Empty",
+    "input": "",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"\",\"length\":0,\"valid\":false,\"validity\":{\"valueMissing\":true,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"Please fill out this field.\"}"
+  },
+  {
+    "field": "Phone Number",
+    "test": "9 digits",
+    "input": "987654321",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"987654321\",\"length\":9,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Phone Number",
+    "test": "10 digits",
+    "input": "9876543210",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"9876543210\",\"length\":10,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Phone Number",
+    "test": "11 digits",
+    "input": "98765432101",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"98765432101\",\"length\":11,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Phone Number",
+    "test": "Letters",
+    "input": "abcdefghij",
+    "observed": "FILL ERROR",
+    "detail": "locator.fill: Error: Cannot type text into input[type=number]\nCall log:\n\u001b[2m  - waiting for locator('#modal-wrapper').getByText(/^\\s*Phone Number\\s*\\*?\\s*$/i).first().locator('..')"
+  },
+  {
+    "field": "Phone Number",
+    "test": "Mixed characters",
+    "input": "98765abcde",
+    "observed": "FILL ERROR",
+    "detail": "locator.fill: Error: Cannot type text into input[type=number]\nCall log:\n\u001b[2m  - waiting for locator('#modal-wrapper').getByText(/^\\s*Phone Number\\s*\\*?\\s*$/i).first().locator('..')"
+  },
+  {
+    "field": "Phone Number",
+    "test": "Special characters",
+    "input": "+91-9876543210",
+    "observed": "FILL ERROR",
+    "detail": "locator.fill: Error: Cannot type text into input[type=number]\nCall log:\n\u001b[2m  - waiting for locator('#modal-wrapper').getByText(/^\\s*Phone Number\\s*\\*?\\s*$/i).first().locator('..')"
+  },
+  {
+    "field": "Password",
+    "test": "HTML constraints",
+    "input": "",
+    "observed": "INSPECTED",
+    "detail": "{\"tag\":\"INPUT\",\"type\":\"text\",\"name\":\"password\",\"required\":true,\"minLength\":-1,\"maxLength\":-1,\"min\":\"\",\"max\":\"\",\"pattern\":\"\",\"placeholder\":\"Enter Password\",\"inputMode\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "Empty",
+    "input": "[REDACTED: 0 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":0,\"valid\":false,\"validity\":{\"valueMissing\":true,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"Please fill out this field.\"}"
+  },
+  {
+    "field": "Password",
+    "test": "One character",
+    "input": "[REDACTED: 1 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":1,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "7 characters",
+    "input": "[REDACTED: 7 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":7,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "8 characters",
+    "input": "[REDACTED: 8 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":8,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "16 characters",
+    "input": "[REDACTED: 16 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":16,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "64 characters",
+    "input": "[REDACTED: 64 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":64,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "128 characters",
+    "input": "[REDACTED: 128 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":128,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "Numbers only",
+    "input": "[REDACTED: 8 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":8,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "Letters only",
+    "input": "[REDACTED: 8 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":8,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Password",
+    "test": "Special characters",
+    "input": "[REDACTED: 8 chars]",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"length\":8,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Pincode",
+    "test": "HTML constraints",
+    "input": "",
+    "observed": "INSPECTED",
+    "detail": "{\"tag\":\"INPUT\",\"type\":\"number\",\"name\":\"pincode\",\"required\":true,\"minLength\":-1,\"maxLength\":-1,\"min\":\"\",\"max\":\"\",\"pattern\":\"\",\"placeholder\":\"Enter Pincode\",\"inputMode\":\"\"}"
+  },
+  {
+    "field": "Pincode",
+    "test": "Empty",
+    "input": "",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"\",\"length\":0,\"valid\":false,\"validity\":{\"valueMissing\":true,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"Please fill out this field.\"}"
+  },
+  {
+    "field": "Pincode",
+    "test": "5 digits",
+    "input": "56000",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"56000\",\"length\":5,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Pincode",
+    "test": "6 digits",
+    "input": "560001",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"560001\",\"length\":6,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Pincode",
+    "test": "7 digits",
+    "input": "5600012",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"5600012\",\"length\":7,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Pincode",
+    "test": "Letters",
+    "input": "abcdef",
+    "observed": "FILL ERROR",
+    "detail": "locator.fill: Error: Cannot type text into input[type=number]\nCall log:\n\u001b[2m  - waiting for locator('#modal-wrapper').getByText(/^\\s*Pincode\\s*\\*?\\s*$/i).first().locator('..').loca"
+  },
+  {
+    "field": "Pincode",
+    "test": "Mixed characters",
+    "input": "560ab1",
+    "observed": "FILL ERROR",
+    "detail": "locator.fill: Error: Cannot type text into input[type=number]\nCall log:\n\u001b[2m  - waiting for locator('#modal-wrapper').getByText(/^\\s*Pincode\\s*\\*?\\s*$/i).first().locator('..').loca"
+  },
+  {
+    "field": "Pincode",
+    "test": "Leading zero",
+    "input": "012345",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"012345\",\"length\":6,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Address (Communication)",
+    "test": "HTML constraints",
+    "input": "",
+    "observed": "INSPECTED",
+    "detail": "{\"tag\":\"INPUT\",\"type\":\"text\",\"name\":\"address\",\"required\":true,\"minLength\":-1,\"maxLength\":-1,\"min\":\"\",\"max\":\"\",\"pattern\":\"\",\"placeholder\":\"Enter the Address\",\"inputMode\":\"\"}"
+  },
+  {
+    "field": "Address (Communication)",
+    "test": "Empty",
+    "input": "",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"\",\"length\":0,\"valid\":false,\"validity\":{\"valueMissing\":true,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"Please fill out this field.\"}"
+  },
+  {
+    "field": "Address (Communication)",
+    "test": "One character",
+    "input": "A",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"A\",\"length\":1,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Address (Communication)",
+    "test": "10 characters",
+    "input": "AAAAAAAAAA",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"AAAAAAAAAA\",\"length\":10,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Address (Communication)",
+    "test": "100 characters",
+    "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"length\":100,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Address (Communication)",
+    "test": "256 characters",
+    "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA... (256 chars)",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"length\":256,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Address (Communication)",
+    "test": "Numbers only",
+    "input": "123456",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"123456\",\"length\":6,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Address (Communication)",
+    "test": "Special characters",
+    "input": "@#$%",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"@#$%\",\"length\":4,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Address (Permanent)",
+    "test": "Field discovery",
+    "input": "",
+    "observed": "NOT FOUND",
+    "detail": "Check label or custom control"
+  },
+  {
+    "field": "Family Code",
+    "test": "HTML constraints",
+    "input": "",
+    "observed": "INSPECTED",
+    "detail": "{\"tag\":\"INPUT\",\"type\":\"text\",\"name\":\"family_code\",\"required\":false,\"minLength\":-1,\"maxLength\":-1,\"min\":\"\",\"max\":\"\",\"pattern\":\"\",\"placeholder\":\"Enter Family Code\",\"inputMode\":\"\"}"
+  },
+  {
+    "field": "Family Code",
+    "test": "Empty",
+    "input": "",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"\",\"length\":0,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Family Code",
+    "test": "Letters",
+    "input": "FAMILY",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"FAMILY\",\"length\":6,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Family Code",
+    "test": "Numbers",
+    "input": "123456",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"123456\",\"length\":6,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Family Code",
+    "test": "Alphanumeric",
+    "input": "FAM123",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"FAM123\",\"length\":6,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Family Code",
+    "test": "Special characters",
+    "input": "@#$%",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"@#$%\",\"length\":4,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Family Code",
+    "test": "100 characters",
+    "input": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\",\"length\":100,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Family Code",
+    "test": "256 characters",
+    "input": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF... (256 chars)",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "{\"value\":\"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\",\"length\":256,\"valid\":true,\"validity\":{\"valueMissing\":false,\"tooShort\":false,\"tooLong\":false,\"typeMismatch\":false,\"patternMismatch\":false,\"rangeUnderflow\":false,\"rangeOverflow\":false,\"badInput\":false},\"message\":\"\"}"
+  },
+  {
+    "field": "Referred Type",
+    "test": "Available dropdown choices",
+    "input": "",
+    "observed": "OBSERVED",
+    "detail": "[\"Self Joining\",\"Customer\",\"Employee\",\"Agent\",\"Others\"]"
+  },
+  {
+    "field": "Collection Area",
+    "test": "Available dropdown choices",
+    "input": "",
+    "observed": "OBSERVED",
+    "detail": "[]"
+  },
+  {
+    "field": "Customer Relationship Manager",
+    "test": "Available dropdown choices",
+    "input": "",
+    "observed": "OBSERVED",
+    "detail": "[\"Hariharan | 9876543210\"]"
+  },
+  {
+    "field": "Payment Frequency",
+    "test": "Radio options",
+    "input": "",
+    "observed": "OBSERVED",
+    "detail": "[{\"value\":\"daily\",\"disabled\":false,\"checked\":false},{\"value\":\"weekly\",\"disabled\":false,\"checked\":false},{\"value\":\"monthly\",\"disabled\":false,\"checked\":false}]"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "HTML constraints",
+    "input": "",
+    "observed": "INSPECTED",
+    "detail": "{\"type\":\"number\",\"min\":\"\",\"max\":\"\",\"step\":\"\",\"required\":false}"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "Empty",
+    "input": "",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "actual=\"\", htmlValid=true"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "Zero",
+    "input": "0",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "actual=\"0\", htmlValid=true"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "Negative",
+    "input": "-1",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "actual=\"-1\", htmlValid=true"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "One",
+    "input": "1",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "actual=\"1\", htmlValid=true"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "100",
+    "input": "100",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "actual=\"100\", htmlValid=true"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "Decimal",
+    "input": "100.50",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "actual=\"100.50\", htmlValid=false"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "Very large",
+    "input": "999999999999",
+    "observed": "ACCEPTED IN INPUT",
+    "detail": "actual=\"999999999999\", htmlValid=true"
+  },
+  {
+    "field": "Installment Amount",
+    "test": "Letters",
+    "input": "abc",
+    "observed": "FILL ERROR",
+    "detail": "locator.fill: Error: Cannot type text into input[type=number]\nCall log:\n\u001b[2m  - waiting for locator('#modal-wrapper input[name=\"installment_"
+  }
+]
