@@ -948,7 +948,29 @@ npx playwright test tests/auth/LoanAdd.spec.js --project=chromium --headed --wor
 npx playwright test tests/auth/GuarantorAdd.spec.js --project=chromium --headed --workers=1
 
 # Guarantor Delete
-npx playwright test tests/auth/GuarantorDelete.spec.js --project=chromium --headed --workers=1
+npx playwright test tests/auth/GuarantorDelete.spec.js --project=chromium --headed --workers=1  
+
+### 13/11/2026 – Playwright Automation Commands
+
+**1. Linked Guarantor Add**
+```bash
+npx playwright test tests/auth/LinkedGuarantorAdd.spec.js --project=chromium --headed --workers=1
+```
+
+**2. Co-Applicant Add**
+```bash
+npx playwright test tests/auth/Co-ApplicantAdd.spec.js --project=chromium --headed --workers=1
+```
+
+**3. Co-Applicant Delete**
+```bash
+npx playwright test tests/auth/Co-ApplicantDelete.spec.js --project=chromium --headed --workers=1
+```
+
+**4. Group Category Add**
+```bash
+npx playwright test tests/auth/GroupCategoryAdd.spec.js --project=chromium --headed --workers=1
+```
 
 
 
