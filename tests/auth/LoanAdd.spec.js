@@ -1,3 +1,4 @@
+
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
@@ -9,96 +10,229 @@ test('Add Loan for Blr-gayle', async ({ page }) => {
   test.setTimeout(120000);
 
   const baseURL =
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com';
+    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/';
 
-  // Open dashboard using saved login session
-  await page.goto(`${baseURL}/dashboard`);
-  await page.waitForLoadState('domcontentloaded');
+  // STEP 1: Open website using saved login session
+  await page.goto(baseURL, {
+    waitUntil: 'domcontentloaded',
+    timeout: 45000
+  });
+
+  console.log('Website opened:', page.url());
+
+  // STEP 2: Check login session
+  const loginVisible = await page
+    .getByText('Admin Login', { exact: true })
+    .isVisible()
+    .catch(() => false);
+
+  if (loginVisible) {
+    throw new Error(
+      'Login session expired. Run LoginAutomation.spec.js first.'
+    );
+  }
+
+  console.log('Login session active.');
+
+  // STEP 3: Open Dashboard
+  await page.goto(`${baseURL}dashboard`, {
+    waitUntil: 'domcontentloaded'
+  });
 
   console.log('Dashboard opened:', page.url());
 
-  // Navigate to Loan page
-  await page.goto(
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/other-service-menu/loan'
-  );
-
-  await page.waitForLoadState('domcontentloaded');
+  // STEP 4: Navigate to Other Service Loan page
+  await page.goto(`${baseURL}other-service-menu/loan`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 45000
+  });
 
   console.log('Loan page opened:', page.url());
 
-  // Click + Add Loan
+  // STEP 5: Check login session again
+  const redirectedToLogin = await page
+    .getByText('Admin Login', { exact: true })
+    .isVisible()
+    .catch(() => false);
+
+  if (redirectedToLogin) {
+    throw new Error('Redirected to Admin Login. Check auth-state.json.');
+  }
+
+  console.log('Loan page login verified.');
+
+  // STEP 6: Open Add Loan form
   const addLoanButton = page.getByRole('button', {
     name: /add loan/i
   });
 
-  await expect(addLoanButton).toBeVisible({ timeout: 20000 });
+  await expect(addLoanButton).toBeVisible({
+    timeout: 15000
+  });
+
   await addLoanButton.click();
 
-  console.log('Add Loan form opened');
+  console.log('Add Loan form opened.');
 
-  // Select Borrower Name: Blr-gayle
-  const borrowerField = page.getByText('Borrower Name', {
-    exact: false
-  }).first();
+  // Helper: Select Ant Design dropdown using its label
+  async function selectField(labelText, valuePattern) {
+    const label = page.locator('label').filter({
+      hasText: new RegExp(`^${labelText}\\s*\\*?$`, 'i')
+    }).last();
 
-  await expect(borrowerField).toBeVisible({ timeout: 15000 });
+    await expect(label).toBeVisible({
+      timeout: 10000
+    });
 
-  await borrowerField.click();
+    const dropdown = label.locator('xpath=..').locator('.ant-select');
 
-  const borrowerOption = page.getByText('Blr-gayle', {
-    exact: true
-  }).last();
+    await expect(dropdown).toBeVisible({
+      timeout: 10000
+    });
 
-  await expect(borrowerOption).toBeVisible({ timeout: 15000 });
-  await borrowerOption.click();
+    await dropdown.click();
+
+    // Search inside dropdown if search input is available
+    const searchInput = page.locator(
+      '.ant-select-dropdown:visible input'
+    ).last();
+
+    if (await searchInput.isVisible().catch(() => false)) {
+      await searchInput.fill(
+        typeof valuePattern === 'string'
+          ? valuePattern
+          : 'Blr'
+      );
+    }
+
+    const option = page
+      .locator('.ant-select-dropdown:visible')
+      .getByText(valuePattern, { exact: false })
+      .last();
+
+    await expect(option).toBeVisible({
+      timeout: 15000
+    });
+
+    await option.click();
+
+    console.log(`${labelText} selected.`);
+  }
+
+  // Helper: Fill input using its label
+  async function fillField(labelText, value) {
+    const label = page.locator('label').filter({
+      hasText: new RegExp(`^${labelText}\\s*\\*?$`, 'i')
+    }).last();
+
+    await expect(label).toBeVisible({
+      timeout: 10000
+    });
+
+    const input = label.locator('xpath=..').locator('input').first();
+
+    await expect(input).toBeVisible({
+      timeout: 10000
+    });
+
+    await input.fill(value);
+
+    console.log(`${labelText} entered: ${value}`);
+  }
+
+  // STEP 7: Select Borrower Name
+  await selectField(
+    'Borrower Name',
+    /CUS2614\s*\|\s*Blr-gayle\s*\|\s*7001002445/i
+  );
 
   console.log('Borrower selected: Blr-gayle');
 
-  // Enter Loan Amount: 50000
-  const loanAmountInput = page.getByPlaceholder(/loan amount/i);
+  // STEP 8: Enter Loan Amount
+  await fillField('Loan Amount', '500000');
 
-  await loanAmountInput.fill('50000');
+  // STEP 9: Enter Tenure
+  await fillField('Tenure in Days', '30');
 
-  console.log('Loan Amount entered: 50000');
+  // STEP 10: Enter Service Charges
+  await fillField('Service Charges', '50000');
 
-  // Enter Tenure in Days: 30
-  const tenureInput = page.getByPlaceholder(/tenure in days/i);
+  // STEP 11: Enter Documentation Charges
+  await fillField('Documentation Charges', '5000');
 
-  await tenureInput.fill('30');
-
-  console.log('Tenure entered: 30 days');
-
-  // Select Status: Approved
-  const statusField = page.getByText('Status', {
-    exact: true
-  }).last();
-
-  await statusField.click();
-
-  const approvedOption = page.getByText('Approved', {
-    exact: true
-  }).last();
-
-  await expect(approvedOption).toBeVisible({ timeout: 15000 });
-  await approvedOption.click();
-
-  console.log('Status selected: Approved');
-
-  // Wait for remaining fields to auto-populate
+  // STEP 12: Wait for automatic calculations
   await page.waitForTimeout(2000);
 
-  // Click Save Loan
+  console.log('Waiting for automatic loan calculations.');
+
+  // STEP 13: Verify Daily Payment Amount
+  const dailyPaymentLabel = page.locator('label').filter({
+    hasText: /^Daily Payment Amount\s*\*?$/i
+  }).last();
+
+  const dailyPaymentInput = dailyPaymentLabel
+    .locator('xpath=..')
+    .locator('input')
+    .first();
+
+  await expect(dailyPaymentInput).toHaveValue('16667');
+
+  console.log('Daily Payment Amount verified: 16667');
+
+  // STEP 14: Verify Disbursement Amount
+  const disbursementLabel = page.locator('label').filter({
+    hasText: /^Disbursement Amount\s*\*?$/i
+  }).last();
+
+  const disbursementInput = disbursementLabel
+    .locator('xpath=..')
+    .locator('input')
+    .first();
+
+  await expect(disbursementInput).toHaveValue('445000');
+
+  console.log('Disbursement Amount verified: 445000');
+
+  // STEP 15: Select Referred Type
+  await selectField('Referred Type', 'Customer');
+
+  console.log('Referred Type selected: Customer');
+
+  // STEP 16: Select Referred Customer
+  await selectField(
+    'Select Referred Customer',
+    /Blr-dhoni\s*\|\s*9600976651/i
+  );
+
+  console.log('Referred Customer selected: Blr-dhoni');
+
+  // STEP 17: Leave Note empty
+
+  // STEP 18: Select Status
+  await selectField('Status', /^approved$/i);
+
+  console.log('Status selected: approved');
+
+  // STEP 19: Save Loan
   const saveLoanButton = page.getByRole('button', {
-    name: /save loan/i
+    name: /^Save Loan$/i
   });
 
-  await expect(saveLoanButton).toBeVisible({ timeout: 15000 });
+  await expect(saveLoanButton).toBeVisible({
+    timeout: 15000
+  });
+
+  await expect(saveLoanButton).toBeEnabled({
+    timeout: 10000
+  });
+
   await saveLoanButton.click();
 
-  console.log('Save Loan clicked');
+  console.log('Save Loan clicked.');
 
-  // Wait for the form to submit
+  // STEP 20: Wait for submission
   await page.waitForTimeout(3000);
 
-  console.log('Loan creation flow completed');
+  console.log('Loan submission completed.');
+
 });

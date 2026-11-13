@@ -19,28 +19,28 @@ test('Add Remaining Leads', async ({ page }) => {
   const leads = [
     {
       name: 'Jack Rahul',
-      phone: '9576501054',
+      phone: '9576501036',
       profession: 'Self Employed',
       source: 'Social Media',
       needs: 'Savings'
     },
     {
       name: 'Jack Karthik',
-      phone: '9676501032',
+      phone: '9676501083',
       profession: 'Employed',
       source: 'Social Media',
       needs: 'Savings'
     },
     {
       name: 'Jack Vikram',
-      phone: '9976501094',
+      phone: '9976501054',
       profession: 'Employed',
       source: 'Social Media',
       needs: 'Savings'
     },
     {
       name: 'Jack Praveen',
-      phone: '9076501026',
+      phone: '9076501090',
       profession: 'Employed',
       source: 'Social Media',
       needs: 'Savings'
