@@ -8,7 +8,7 @@ module.exports = [
 
     // Group Type and Relationship Manager
     groupType: 'Divident',
-    relationshipManager: 'test-Yokesh m | 9019706987',
+    relationshipManager: 'Hariharan | 9876543210',
 
     // Basic details
     vacancySeat: '2',

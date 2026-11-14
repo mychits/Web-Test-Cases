@@ -1,333 +1,45 @@
 
-require('dotenv').config();
+'use strict';
 
 const { test, expect } = require('@playwright/test');
-const customers = require('../../test-data/customers');
+require('dotenv').config();
 
-// =====================================
-// CONFIGURATION
-// =====================================
+const data = require('../../test-data/customers');
+const customers = Array.isArray(data) ? data : data.customers;
 
-const BASE_URL = process.env.BASE_URL;
-const ADMIN_ID = process.env.ADMIN_ID;
-const OTP = process.env.OTP;
-const BRANCH_NAME = process.env.BRANCH_NAME;
+const BASE_URL = (
+  process.env.BASE_URL ||
+  'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com'
+).replace(/\/+$/, '');
 
-const COUNTRY = process.env.CUSTOMER_COUNTRY || 'India';
-const STATE = process.env.CUSTOMER_STATE || 'Karnataka';
-const DISTRICT = process.env.CUSTOMER_DISTRICT || 'Bengaluru Urban';
+const CUSTOMER_URL = `${BASE_URL}/customer-menu`;
+const ADD_URL = `${CUSTOMER_URL}/add-customer`;
+const TIMEOUT = 12000;
 
-const PASSWORD =
-  process.env.TEST_CUSTOMER_PASSWORD || 'Test@12345';
+const shown = locator =>
+  locator.isVisible().catch(() => false);
 
-const COLLECTION_AREA =
-  process.env.CUSTOMER_COLLECTION_AREA || '';
-
-const CRM = process.env.CUSTOMER_CRM || '';
-
-for (const [key, value] of Object.entries({
-  BASE_URL,
-  ADMIN_ID,
-  OTP,
-  BRANCH_NAME
-})) {
-  if (!value) {
-    throw new Error(`Missing ${key} in .env`);
-  }
+function exact(value) {
+  return new RegExp(
+    `^\\s*${String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`,
+    'i'
+  );
 }
 
-const ROOT_URL = BASE_URL.replace(/\/+$/, '') + '/';
-
-const CUSTOMER_URL =
-  new URL('customer-menu', ROOT_URL).href;
-
-const ADD_URL =
-  new URL('customer-menu/add-customer', ROOT_URL).href;
-
-// =====================================
-// HELPERS
-// =====================================
-
-async function isVisible(locator) {
-  return locator.first().isVisible().catch(() => false);
-}
-
-function normalizeText(value) {
-  return String(value ?? '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-}
-
-function escapeRegex(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-async function fillOptional(locator, value) {
+async function fill(page, placeholder, value, required = true) {
   if (value === undefined || value === null || value === '') {
+    if (required) {
+      throw new Error(`Missing value for ${placeholder}`);
+    }
     return;
   }
 
-  await expect(locator.first()).toBeVisible();
-  await locator.first().fill(String(value));
-}
+  const field = page.getByPlaceholder(placeholder).first();
 
-async function closeBlockingPopup(page) {
-  const overlay = page.locator(
-    'div.fixed.inset-0.z-\\[9999\\]'
-  ).first();
+  if (!required && !(await shown(field))) return;
 
-  if (!(await isVisible(overlay))) return;
-
-  const dismiss = overlay.getByRole('button', {
-    name: /remind me later|close|cancel|okay|^ok$/i
-  }).first();
-
-  if (await isVisible(dismiss)) {
-    await dismiss.click();
-    await expect(overlay).toBeHidden();
-  }
-}
-
-async function verifyActiveStep(page, expectedStep) {
-  const main = page.locator('main');
-
-  const basic = await isVisible(
-    main.getByPlaceholder('First Name')
-  );
-
-  const address = await isVisible(
-    main.getByPlaceholder('Enter Street, Building, Area')
-  );
-
-  const additional = await isVisible(
-    main.getByPlaceholder('Enter Family Code')
-  );
-
-  const actual = additional
-    ? 'Additional & Payment'
-    : address
-      ? 'Address Details'
-      : basic
-        ? 'Basic Details'
-        : 'Unknown';
-
-  console.log(`[Step] ${actual}`);
-
-  if (actual !== expectedStep) {
-    throw new Error(
-      `Expected "${expectedStep}", found "${actual}". URL: ${page.url()}`
-    );
-  }
-}
-
-// =====================================
-// DROPDOWN SELECTION
-// CLICK ONLY - NO TYPING
-// =====================================
-
-
-async function chooseAntOption(page, select, optionText, fieldName) {
-  await expect(select).toBeVisible({ timeout: 15000 });
-
-  await expect(select).not.toHaveClass(
-    /ant-select-disabled/,
-    { timeout: 15000 }
-  );
-
-  const desired = normalizeText(optionText);
-  const selected = select.locator('.ant-select-selection-item');
-
-  if (await isVisible(selected)) {
-    const current = await selected.innerText();
-
-    if (normalizeText(current) === desired) {
-      console.log(
-        `[Dropdown] Already selected ${fieldName}: ${optionText}`
-      );
-      return;
-    }
-  }
-
-  await select.scrollIntoViewIfNeeded();
-  await select.locator('.ant-select-selector').click();
-
-  const popup = page.locator(
-    '.ant-select-dropdown:visible'
-  ).last();
-
-  await expect(popup).toBeVisible({ timeout: 15000 });
-
-  const options = popup.locator(
-    '.ant-select-item-option:not(.ant-select-item-option-disabled)'
-  );
-
-  await expect(options.first()).toBeVisible({
-    timeout: 15000
-  });
-
-  const matchingOption = options.filter({
-    hasText: new RegExp(
-      `^\\s*${escapeRegex(optionText)}\\s*$`,
-      'i'
-    )
-  }).first();
-
-  // FIRST: Click the option immediately if it is visible.
-  if (await isVisible(matchingOption)) {
-    await matchingOption.click();
-
-    await expect.poll(
-      async () => normalizeText(
-        await selected.innerText().catch(() => '')
-      ),
-      { timeout: 15000 }
-    ).toBe(desired);
-
-    console.log(
-      `[Dropdown] Selected ${fieldName}: ${optionText}`
-    );
-    return;
-  }
-
-  // SECOND: Scroll only if the option is not rendered.
-  const holder = popup.locator(
-    '.rc-virtual-list-holder'
-  ).first();
-
-  if (!(await isVisible(holder))) {
-    throw new Error(
-      `Cannot find "${optionText}" in ${fieldName}. ` +
-      `Options: ${JSON.stringify(await options.allTextContents())}`
-    );
-  }
-
-  let found = false;
-
-  for (let attempt = 0; attempt < 60; attempt++) {
-    if (await isVisible(matchingOption)) {
-      await matchingOption.click();
-      found = true;
-      break;
-    }
-
-    const moved = await holder.evaluate(element => {
-      const previous = element.scrollTop;
-
-      element.scrollTop += Math.max(
-        100,
-        Math.floor(element.clientHeight * 0.7)
-      );
-
-      return element.scrollTop > previous;
-    });
-
-    if (!moved) break;
-
-    // Wait for virtualized dropdown options to update.
-    await expect.poll(
-      async () => {
-        const texts = await options.allTextContents();
-        return texts.some(
-          text => normalizeText(text) === desired
-        );
-      },
-      {
-        timeout: 1500,
-        intervals: [100, 200, 300]
-      }
-    ).toBe(true).catch(() => {});
-  }
-
-  if (!found && await isVisible(matchingOption)) {
-    await matchingOption.click();
-    found = true;
-  }
-
-  if (!found) {
-    throw new Error(
-      `Cannot select "${optionText}" in ${fieldName}. ` +
-      `Visible options: ${JSON.stringify(await options.allTextContents())}`
-    );
-  }
-
-  await expect.poll(
-    async () => normalizeText(
-      await selected.innerText().catch(() => '')
-    ),
-    { timeout: 15000 }
-  ).toBe(desired);
-
-  console.log(
-    `[Dropdown] Selected ${fieldName}: ${optionText}`
-  );
-}
-
-
-async function selectAddressDropdown(
-  page,
-  index,
-  optionText,
-  fieldName
-) {
-  const select = page.locator('main .ant-select').nth(index);
-
-  await chooseAntOption(
-    page,
-    select,
-    optionText,
-    fieldName
-  );
-}
-
-async function selectOtherDropdown(
-  page,
-  fieldLabel,
-  optionText
-) {
-  const placeholders = {
-    'Referred Type': 'Select Referred Type',
-    'Collection Area': 'Select Or Search Collection Area',
-    'Customer Relationship Manager': 'Select Or Search CRM'
-  };
-
-  const placeholderText = placeholders[fieldLabel];
-
-  if (!placeholderText) {
-    throw new Error(`Unknown dropdown: ${fieldLabel}`);
-  }
-
-  const selects = page.locator('main .ant-select');
-
-  const matchingSelect = selects.filter({
-    has: page.locator(
-      '.ant-select-selection-placeholder',
-      { hasText: placeholderText }
-    )
-  }).first();
-
-  await expect(matchingSelect).toBeVisible({
-    timeout: 15000
-  });
-
-  const index = await matchingSelect.evaluate(element => {
-    const all = Array.from(
-      document.querySelectorAll('main .ant-select')
-    );
-
-    return all.indexOf(element);
-  });
-
-  if (index < 0) {
-    throw new Error(`Cannot locate ${fieldLabel}`);
-  }
-
-  await chooseAntOption(
-    page,
-    selects.nth(index),
-    optionText,
-    fieldLabel
-  );
+  await expect(field).toBeVisible({ timeout: TIMEOUT });
+  await field.fill(String(value));
 }
 
 // =====================================
@@ -335,68 +47,71 @@ async function selectOtherDropdown(
 // =====================================
 
 async function login(page) {
-  await page.goto(ROOT_URL, {
-    waitUntil: 'domcontentloaded',
-    timeout: 45000
+  await page.goto(BASE_URL, {
+    waitUntil: 'domcontentloaded'
   });
 
-  const loginHeading = page.getByRole('heading', {
-    name: /admin login/i
-  });
+  if (await shown(
+    page.getByRole('heading', { name: /admin login/i })
+  )) {
+    const branch = page.locator('select').first();
 
-  if (!(await isVisible(loginHeading))) {
-    console.log('[Login] Existing session detected');
-    return;
-  }
-
-  await page.locator('select').first().selectOption({
-    label: BRANCH_NAME
-  });
-
-  await page.getByPlaceholder('XXX-XX-XXXX')
-    .fill(ADMIN_ID);
-
-  await page.getByRole('button', {
-    name: /send otp/i
-  }).click();
-
-  const otpInputs = page.locator(
-    'input[autocomplete="one-time-code"], ' +
-    'input[name*="otp" i], ' +
-    'input[placeholder*="otp" i], ' +
-    'input[inputmode="numeric"], ' +
-    'input[maxlength="6"]'
-  );
-
-  await expect(otpInputs.first()).toBeVisible({
-    timeout: 30000
-  });
-
-  const count = await otpInputs.count();
-
-  if (count === 1) {
-    await otpInputs.first().fill(String(OTP));
-  } else if (count === 6) {
-    if (String(OTP).length !== 6) {
-      throw new Error('Expected a six-digit OTP');
+    if (await shown(branch)) {
+      await branch.selectOption({
+        label: process.env.BRANCH_NAME ||
+          'Main Branch (CF-BR-1)'
+      });
     }
 
-    for (let i = 0; i < 6; i++) {
-      await otpInputs.nth(i).fill(String(OTP)[i]);
+    if (!process.env.ADMIN_ID || !process.env.OTP) {
+      throw new Error('Set ADMIN_ID and OTP in .env');
     }
-  } else {
-    throw new Error(`Unexpected OTP input count: ${count}`);
+
+    await fill(
+      page,
+      'XXX-XX-XXXX',
+      process.env.ADMIN_ID
+    );
+
+    await page.getByRole('button', {
+      name: /send otp/i
+    }).click();
+
+    const otp = page.locator(
+      'input[autocomplete="one-time-code"], ' +
+      'input[name*="otp" i], ' +
+      'input[placeholder*="otp" i], ' +
+      'input[inputmode="numeric"], ' +
+      'input[maxlength="6"]:visible'
+    );
+
+    await expect(otp.first()).toBeVisible({
+      timeout: 30000
+    });
+
+    const count = await otp.count();
+
+    if (count === 1) {
+      await otp.first().fill(process.env.OTP);
+    } else if (count === process.env.OTP.length) {
+      for (let i = 0; i < count; i++) {
+        await otp.nth(i).fill(process.env.OTP[i]);
+      }
+    } else {
+      throw new Error(
+        `Unexpected OTP input count: ${count}`
+      );
+    }
+
+    await page.getByRole('button', {
+      name: /verify otp|verify|login|submit/i
+    }).last().click();
+
+    await page.waitForURL(
+      /\/(dashboard|customer-menu)\/?(?:\?.*)?$/,
+      { timeout: 30000 }
+    );
   }
-
-  await page.getByRole('button', {
-    name: /verify otp|verify|login|submit/i
-  }).last().click();
-
-  await expect(loginHeading).toBeHidden({
-    timeout: 60000
-  });
-
-  await closeBlockingPopup(page);
 
   console.log('[Login] Successful');
 }
@@ -405,382 +120,573 @@ async function login(page) {
 // CUSTOMER MANAGEMENT
 // =====================================
 
-async function openCustomerManagement(page) {
-  const path = new URL(page.url()).pathname;
-
-  if (path !== '/customer-menu' && path !== '/customer-menu/') {
+async function customersPage(page) {
+  if (
+    new URL(page.url()).pathname.replace(/\/$/, '') !==
+    '/customer-menu'
+  ) {
     await page.goto(CUSTOMER_URL, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60000
+      waitUntil: 'domcontentloaded'
     });
   }
-
-  await closeBlockingPopup(page);
 
   await expect(
     page.getByRole('button', {
       name: /add customer/i
-    })
-  ).toBeVisible({
-    timeout: 30000
-  });
+    }).first()
+  ).toBeVisible({ timeout: 20000 });
 
-  await expect(page).toHaveURL(
-    /\/customer-menu\/?$/
-  );
-
-  console.log('[Navigation] Customer Management opened');
+  console.log('[Navigation] Customers');
 }
 
-async function openAddCustomer(page) {
-  await openCustomerManagement(page);
+async function addCustomerPage(page) {
+  await customersPage(page);
 
-  await page.goto(ADD_URL, {
-    waitUntil: 'domcontentloaded',
-    timeout: 60000
-  });
+  await page.getByRole('button', {
+    name: /add customer/i
+  }).first().click();
 
-  await expect(
-    page.getByPlaceholder('First Name')
-  ).toBeVisible({
-    timeout: 30000
-  });
+  const name = page.getByPlaceholder(
+    /first\s*name|enter the full name/i
+  ).first();
 
-  console.log('[Navigation] Add Customer opened');
-}
+  try {
+    await expect(name).toBeVisible({
+      timeout: 5000
+    });
+  } catch {
+    await page.goto(ADD_URL, {
+      waitUntil: 'domcontentloaded'
+    });
 
-async function clickContinue(page) {
-  const button = page.getByRole('button', {
-    name: /save\s*&\s*continue/i
-  });
+    await expect(name).toBeVisible({
+      timeout: TIMEOUT
+    });
+  }
 
-  await expect(button).toBeEnabled();
-  await button.click();
+  console.log('[Navigation] Add Customer');
 }
 
 // =====================================
 // STEP 1: BASIC DETAILS
 // =====================================
 
-async function fillBasicDetails(page, customer) {
-  const parts = String(customer.name).trim().split(/\s+/);
+async function basicDetails(page, c) {
+  console.log('[Step 1] Basic Details');
 
-  const firstName = customer.firstName || parts[0];
-  const lastName =
-    customer.lastName || parts.slice(1).join(' ');
+  const first = page.getByPlaceholder(
+    /first\s*name/i
+  ).first();
 
-  if (!firstName || !lastName) {
-    throw new Error(`Invalid customer name: ${customer.name}`);
-  }
-
-  await page.getByPlaceholder('First Name')
-    .fill(firstName);
-
-  await fillOptional(
-    page.getByPlaceholder('Middle Name'),
-    customer.middleName
-  );
-
-  await page.getByPlaceholder('Last Name')
-    .fill(lastName);
-
-  await fillOptional(
-    page.getByPlaceholder('Enter Email'),
-    customer.email
-  );
-
-  await page.getByPlaceholder('Enter Phone Number')
-    .fill(String(customer.phone));
-
-  const password = page.getByPlaceholder(
-    'Auto Generated Password'
-  );
-
-  if (
-    await isVisible(password) &&
-    await password.isEditable()
-  ) {
-    await password.fill(PASSWORD);
-  }
-
-  await page.getByPlaceholder('Enter Pincode')
-    .fill(String(customer.pincode));
-
-  await page.getByPlaceholder(
-    /enter\s+ad(?:h)?aar\s+number/i
-  ).fill(String(customer.aadhaar));
-
-  await option.click();
-
-  // Verify using the stable combobox ID.
-  // This does not depend on the placeholder remaining visible.
-  const selectedField = page.locator(
-    `input[id="${comboboxId}"]`
-  ).locator(
-    'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ant-select ")][1]'
-  );
-
-  await expect(
-    selectedField.locator('.ant-select-selection-item')
-  ).toHaveText(type, {
-    timeout: 15000
-  });
-
-  console.log(`Referred Type selected successfully: ${type}`);
-}
-
-
-// =====================================
-// CHECK EXISTING CUSTOMER
-// =====================================
-
-async function customerAlreadyExists(page, customer) {
-  const phone = String(customer.phone);
-
-  const row = page.getByRole('row').filter({
-    has: page.getByRole('cell', {
-      name: phone,
-      exact: true
-    })
-  });
-
-  return (await row.count()) > 0;
-}
-
-// =====================================
-// CREATE ONE CUSTOMER
-// =====================================
-
-async function createCustomer(page, customer, index) {
-  console.log(
-    `Creating customer ${index}/${customers.length}: ${customer.name}`
-  );
-
-  await openCustomerManagement(page);
-
-  // Avoid duplicates in the visible customer table.
-  if (await customerAlreadyExists(page, customer)) {
-    console.log(
-      `Skipping existing customer: ${customer.name}`
+  if (await shown(first)) {
+    await first.fill(
+      c.firstName || c.name.split(/\s+/)[0]
     );
 
-    return 'skipped';
+    await fill(
+      page,
+      /middle\s*name/i,
+      c.middleName,
+      false
+    );
+
+    await fill(
+      page,
+      /last\s*name/i,
+      c.lastName ||
+        c.name.split(/\s+/).slice(1).join(' ')
+    );
+  } else {
+    await fill(
+      page,
+      /enter the full name/i,
+      c.name
+    );
   }
 
-  await openAddCustomer(page);
+  await fill(
+    page,
+    /enter email/i,
+    c.email,
+    false
+  );
 
-  // =====================================
-  // STEP 1 - BASIC DETAILS
-  // =====================================
+  await fill(
+    page,
+    /enter phone number/i,
+    c.phone
+  );
 
-  await page.getByPlaceholder(
-    'Enter the Full Name'
-  ).fill(customer.name);
+  await fill(
+    page,
+    /enter pincode/i,
+    c.pincode
+  );
 
-  await page.getByPlaceholder(
-    'Enter Email'
-  ).fill(customer.email);
+  await fill(
+    page,
+    /enter (adhaar|aadhaar) number/i,
+    c.aadhaar
+  );
 
-  await page.getByPlaceholder(
-    'Enter Phone Number'
-  ).fill(String(customer.phone));
-
-  await page.getByPlaceholder(
-    'Enter Password'
-  ).fill(PASSWORD);
-
-  await page.getByPlaceholder(
-    'Enter Pincode'
-  ).fill(String(customer.pincode));
-
-  await page.getByPlaceholder(
-    /enter\s+(?:aadhaar|adhaar)\s+number/i
-  ).fill(String(customer.aadhaar));
-
-  await page.getByPlaceholder(
-    /enter\s+pan\s+number/i
-  ).fill(String(customer.pan));
-
-  await page.getByPlaceholder(
-    /enter\s+the\s+address/i
-  ).fill(customer.address);
-
-  await page.getByPlaceholder(
-    'Enter the Permanent Address'
-  ).fill(customer.address);
-
-  console.log('Step 1 completed');
+  await fill(
+    page,
+    /enter pan number/i,
+    c.pan,
+    false
+  );
 
   await page.getByRole('button', {
     name: /save\s*&\s*continue/i
   }).click();
 
-  // =====================================
-  // STEP 2 - ADDITIONAL & PAYMENT
-  // =====================================
+  await expect(
+    page.getByText('Communication Address', {
+      exact: true
+    })
+  ).toBeVisible({ timeout: 15000 });
 
-  const familyCode = page.getByPlaceholder(
-    'Enter Family Code'
-  );
+  console.log('[Step 1] Completed');
+}
 
-  await expect(familyCode).toBeVisible({
-    timeout: 30000
+// =====================================
+// ADDRESS DROPDOWN HELPER
+// DECLARED ONLY ONCE
+// =====================================
+
+async function addressSelect(page, index, expected, label) {
+  const dropdown = page.locator(
+    '.ant-select:visible'
+  ).nth(index);
+
+  await expect(dropdown).toBeVisible({
+    timeout: TIMEOUT
   });
 
-  if (customer.familyCode != null) {
-    await familyCode.fill(
-      String(customer.familyCode)
+  const selected = dropdown.locator(
+    '.ant-select-selection-item'
+  ).first();
+
+  const current = (
+    await selected.textContent().catch(() => '')
+  ).trim();
+
+  if (
+    current.toLowerCase() === expected.toLowerCase()
+  ) {
+    console.log(
+      `[Address] ${label}: ${expected} (already selected)`
+    );
+    return;
+  }
+
+  await dropdown.locator(
+    '.ant-select-selector'
+  ).click();
+
+  const popup = page.locator(
+    '.ant-select-dropdown:visible'
+  ).last();
+
+  await expect(popup).toBeVisible({
+    timeout: TIMEOUT
+  });
+
+  const search = dropdown.locator(
+    'input.ant-select-selection-search-input'
+  ).first();
+
+  if (
+    (await shown(search)) &&
+    (await search.getAttribute('readonly')) === null
+  ) {
+    await search.fill(expected);
+  }
+
+  const option = popup.locator(
+    '.ant-select-item-option:not(.ant-select-item-option-disabled)'
+  ).filter({
+    hasText: exact(expected)
+  }).first();
+
+  await expect(option).toBeVisible({
+    timeout: TIMEOUT
+  });
+
+  await option.click();
+
+  await expect(selected).toHaveText(
+    exact(expected),
+    { timeout: TIMEOUT }
+  );
+
+  console.log(`[Address] ${label}: ${expected}`);
+}
+
+// =====================================
+// STEP 2: ADDRESS DETAILS
+// =====================================
+
+async function addressDetails(page, c) {
+  console.log('[Step 2] Address Details');
+
+  const addressValue = c.communicationAddress || c.address;
+
+  if (!addressValue) {
+    throw new Error(
+      `Communication address missing for ${c.name}`
     );
   }
 
-  // Referred Type
-  await selectReferredType(
-    page,
-    customer.referredType || 'Self Joining'
+  const byLabel = page.getByRole('textbox', {
+    name: /address line/i
+  }).first();
+
+  const byPlaceholder = page.getByPlaceholder(
+    /address/i
+  ).first();
+
+  let communicationAddress;
+
+  if (await byLabel.isVisible().catch(() => false)) {
+    communicationAddress = byLabel;
+  } else if (
+    await byPlaceholder.isVisible().catch(() => false)
+  ) {
+    communicationAddress = byPlaceholder;
+  } else {
+    const inputs = await page.locator(
+      'input:visible, textarea:visible'
+    ).evaluateAll(elements =>
+      elements.map(el => ({
+        tag: el.tagName,
+        placeholder: el.getAttribute('placeholder'),
+        name: el.getAttribute('name'),
+        id: el.id
+      }))
+    );
+
+    console.log('[Step 2] Visible inputs:', inputs);
+
+    throw new Error(
+      'Address Line input not found. Check terminal.'
+    );
+  }
+
+  await communicationAddress.fill(addressValue);
+
+  await expect(communicationAddress).toHaveValue(
+    addressValue
   );
 
-  // Payment Frequency
-  const frequency =
-    customer.paymentFrequency || 'Daily';
+  console.log('[Address] Communication Address filled:', addressValue);
 
-  await page.getByRole('radio', {
-    name: new RegExp(`^${frequency}$`, 'i')
-  }).check();
 
-  // Installment Amount
+
+  
+
+  await addressSelect(
+    page, 0, c.country || 'India', 'Country'
+  );
+
+  await addressSelect(
+    page, 1, c.state || 'Karnataka', 'State'
+  );
+
+  await addressSelect(
+    page, 2, c.district || 'Bengaluru Urban', 'District'
+  );
+
+  // Copy Communication Address to Permanent Address.
+  const sameAddress = page.getByRole('checkbox', {
+    name: /same as communication address/i
+  });
+
+  await expect(sameAddress).toBeVisible({
+    timeout: TIMEOUT
+  });
+
+  if (!(await sameAddress.isChecked())) {
+    await sameAddress.check();
+  }
+
+  console.log('[Address] Same as Communication Address checked');
+
+  // Save Address Details.
+  await page.getByRole('button', {
+    name: /save\s*&\s*continue/i
+  }).click();
+
+  // Check whether the application reports validation errors.
+  const addressError = page.getByText(
+    /address line is required/i
+  );
+
+  if (await addressError.isVisible().catch(() => false)) {
+    throw new Error(
+      'Address Line is still required after filling the field'
+    );
+  }
+
+  // Wait for Step 3.
+  await expect(
+    page.getByText('Additional & Payment', {
+      exact: true
+    }).last()
+  ).toBeVisible({ timeout: 15000 });
+
+  console.log('[Step 2] Completed');
+}
+// =====================================
+// STEP 3: ADDITIONAL & PAYMENT
+// =====================================
+
+async function additionalDetails(page, c) {
+  console.log('[Step 3] Additional & Payment');
+
+  await fill(
+    page,
+    /enter family code/i,
+    c.familyCode,
+    false
+  );
+
+  const referred = c.referredType || 'Self Joining';
+
+  const selected = page.locator(
+    '.ant-select-selection-item:visible'
+  ).filter({
+    hasText: exact(referred)
+  }).first();
+
+  if (!(await shown(selected))) {
+    const label = page.getByText(
+      /referred type/i
+    ).first();
+
+    const item = label.locator(
+      'xpath=ancestor::*[contains(@class,"ant-form-item")][1]'
+    );
+
+    const native = item.locator('select').first();
+
+    if (await shown(native)) {
+      await native.selectOption({
+        label: referred
+      });
+    } else {
+      const ant = item.locator(
+        '.ant-select'
+      ).first();
+
+      await expect(ant).toBeVisible({
+        timeout: TIMEOUT
+      });
+
+      await ant.locator(
+        '.ant-select-selector'
+      ).click();
+
+      await page.locator(
+        '.ant-select-dropdown:visible .ant-select-item-option'
+      ).filter({
+        hasText: exact(referred)
+      }).first().click();
+    }
+  }
+
+  if (
+    c.collectionArea ||
+    c.crm ||
+    c.relationshipManager
+  ) {
+    throw new Error(
+      'Optional Collection Area / CRM selectors need verification against the live form'
+    );
+  }
+
+  const frequency = c.paymentFrequency || 'Daily';
+
+  const radio = page.getByRole('radio', {
+    name: exact(frequency)
+  });
+
+  if (await shown(radio)) {
+    if (!(await radio.isChecked())) {
+      await radio.check();
+    }
+  } else {
+    await page.getByText(
+      exact(frequency)
+    ).filter({
+      visible: true
+    }).last().click();
+  }
+
   const amount = String(
-    customer.installmentAmount ?? 200
+    c.installmentAmount ?? 200
   );
 
   const installment = page.locator(
-    'input[placeholder*="installment" i]'
-  );
+    'input[placeholder*="installment" i]:visible, ' +
+    'input[name="installment_amount"]:visible'
+  ).first();
 
-  if (await installment.count() > 0) {
-    await installment.first().fill(amount);
+  if (await shown(installment)) {
+    await installment.fill(amount);
   } else {
     await page.getByLabel(
       /installment amount/i
     ).fill(amount);
   }
 
-  console.log('Step 2 completed');
+  console.log('[Step 3] Completed');
+}
 
-  // =====================================
-  // SAVE CUSTOMER
-  // =====================================
+// =====================================
+// SAVE CUSTOMER
+// =====================================
+
+async function saveCustomer(page, c) {
+  console.log(`[Save] ${c.name}`);
 
   await page.getByRole('button', {
     name: /^save customer$/i
   }).click();
 
-  // Handle confirmation if one appears.
-  const confirmation = page.getByRole('dialog');
+  const dialog = page.locator(
+    '[role="dialog"]:visible, .ant-modal:visible'
+  ).last();
 
-  if (await confirmation.isVisible().catch(() => false)) {
-    const confirmButton = confirmation.getByRole(
-      'button',
-      {
-        name: /^(confirm|yes|save|ok|okay|proceed)$/i
-      }
-    );
+  if (await shown(dialog)) {
+    const confirm = dialog.getByRole('button', {
+      name: /^(confirm|yes|save|proceed|ok)$/i
+    }).first();
 
-    if (await confirmButton.count() === 1) {
-      await confirmButton.click();
+    if (await shown(confirm)) {
+      await confirm.click();
     }
   }
 
-  // Wait for the form to close.
-  await expect(
-    page.getByPlaceholder('Enter the Full Name')
-  ).toBeHidden({
-    timeout: 30000
-  });
+  const deadline = Date.now() + 20000;
 
-  console.log(
-    `Save flow completed: ${customer.name}`
-  );
+  while (Date.now() < deadline) {
+    const errors = (
+      await page.locator(
+        '.ant-message-error, ' +
+        '.ant-notification-notice-error, ' +
+        '.ant-form-item-explain-error, ' +
+        '[role="alert"]'
+      ).allTextContents().catch(() => [])
+    ).join(' ');
 
-  return 'created';
-}
+    if (
+      /phone number already exists|already registered|already exists/i
+        .test(errors)
+    ) {
+      await customersPage(page);
+      return 'existing';
+    }
 
-// =====================================
-// MAIN TEST
-// =====================================
-
-test('Login once and create 10 customers', async ({ page }) => {
-  test.setTimeout(900000);
-
-  page.setDefaultTimeout(30000);
-  page.setDefaultNavigationTimeout(60000);
-
-  // Check test data.
-  expect(customers).toHaveLength(10);
-
-  let created = 0;
-  let skipped = 0;
-
-  try {
-    // LOGIN ONLY ONCE
-    await test.step('Login to MyChits Admin', async () => {
-      await loginOnce(page);
-    });
-
-    // CREATE 10 CUSTOMERS SEQUENTIALLY
-    for (let i = 0; i < customers.length; i++) {
-      const customer = customers[i];
-
-      await test.step(
-        `Customer ${i + 1}: ${customer.name}`,
-        async () => {
-          const result = await createCustomer(
-            page,
-            customer,
-            i + 1
-          );
-
-          if (result === 'created') {
-            created++;
-          } else if (result === 'skipped') {
-            skipped++;
-          }
-        }
+    if (errors.trim()) {
+      throw new Error(
+        `Save failed for ${c.name}: ${errors}`
       );
     }
 
-    // FINAL STEP
-    await test.step(
-      'Verify customer processing completed',
-      async () => {
-        await openCustomerManagement(page);
+    const success = (
+      await page.locator(
+        '.ant-message-success, ' +
+        '.ant-notification-notice-success, ' +
+        '[role="status"]'
+      ).allTextContents().catch(() => [])
+    ).join(' ');
 
-        expect(created + skipped).toBe(10);
-      }
-    );
+    if (
+      /customer.*(created|saved|added)|successfully/i
+        .test(success)
+    ) {
+      await customersPage(page);
+      return 'created';
+    }
 
-    console.log('================================');
-    console.log(`New save flows: ${created}`);
-    console.log(`Existing customers skipped: ${skipped}`);
-    console.log(`Total processed: ${created + skipped}/10`);
-    console.log('================================');
+    if (
+      !new URL(page.url()).pathname
+        .includes('/add-customer')
+    ) {
+      await customersPage(page);
+      return 'unverified';
+    }
 
-  } catch (error) {
-    console.error(
-      `Stopped after ${created} new save flows`
-    );
-
-    console.error(
-      `Existing customers skipped: ${skipped}`
-    );
-
-    console.error('Current URL:', page.url());
-    console.error('Error:', error.message);
-
-    await page.screenshot({
-      path: 'customer-creation-error.png',
-      fullPage: true
-    }).catch(() => {});
-
-    throw error;
+    await page.waitForTimeout(200);
   }
-});
+
+  throw new Error(
+    `Save outcome not confirmed for ${c.name}`
+  );
+}
+
+// =====================================
+// MAIN TEST: EXACTLY 10 CUSTOMERS
+// =====================================
+
+test(
+  'Login once and create 10 customers sequentially',
+  async ({ page }) => {
+    test.setTimeout(900000);
+    page.setDefaultTimeout(TIMEOUT);
+
+    expect(
+      customers,
+      'Customer data must contain exactly 10 records'
+    ).toHaveLength(10);
+
+    const totals = {
+      created: 0,
+      existing: 0,
+      unverified: 0
+    };
+
+    await login(page);
+
+    for (const [index, customer] of customers.entries()) {
+      console.log(
+        `\n========== ${index + 1}/10: ${customer.name} ==========`
+      );
+
+      try {
+        await addCustomerPage(page);
+        await basicDetails(page, customer);
+        await addressDetails(page, customer);
+        await additionalDetails(page, customer);
+
+        const outcome = await saveCustomer(
+          page,
+          customer
+        );
+
+        totals[outcome]++;
+
+        console.log(
+          `[Progress] ${index + 1}/10: ${outcome}`
+        );
+      } catch (error) {
+        console.error(
+          `[Failed] ${customer.name}: ${error.message}`
+        );
+
+        console.error(`[URL] ${page.url()}`);
+        throw error;
+      }
+    }
+
+    await customersPage(page);
+
+    console.log('[Final results]', totals);
+
+    expect(
+      totals.unverified,
+      'Save outcomes require verification'
+    ).toBe(0);
+  }
+);
