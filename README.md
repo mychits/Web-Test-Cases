@@ -971,8 +971,21 @@ npx playwright test tests/auth/Co-ApplicantDelete.spec.js --project=chromium --h
 ```bash
 npx playwright test tests/auth/GroupCategoryAdd.spec.js --project=chromium --headed --workers=1
 ```
+ ## Automation Testing Commands For Bid Management
 
+# 1. Bid Request Add
+npx playwright test tests/auth/BidRequestAdd.spec.js --project=chromium --headed --workers=1
 
+# 2. Bid Request Accept
+npx playwright test tests/auth/BidRequestAccept.spec.js --project=chromium --headed --workers=1
+
+# 3. Bid Request Prized
+npx playwright test tests/auth/BidRequestPrized.spec.js --project=chromium --headed --workers=1
+
+# 4. Bid Request Delete
+npx playwright test tests/auth/BidRequestDelete.spec.js --project=chromium --headed --workers=1
+
+````
 
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
 
