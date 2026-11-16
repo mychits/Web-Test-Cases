@@ -67,11 +67,7 @@ async function login(page) {
       throw new Error('Set ADMIN_ID and OTP in .env');
     }
 
-    await fill(
-      page,
-      'XXX-XX-XXXX',
-      process.env.ADMIN_ID
-    );
+    await fill(page, 'XXX-XX-XXXX', process.env.ADMIN_ID);
 
     await page.getByRole('button', {
       name: /send otp/i
@@ -204,24 +200,9 @@ async function basicDetails(page, c) {
     );
   }
 
-  await fill(
-    page,
-    /enter email/i,
-    c.email,
-    false
-  );
-
-  await fill(
-    page,
-    /enter phone number/i,
-    c.phone
-  );
-
-  await fill(
-    page,
-    /enter pincode/i,
-    c.pincode
-  );
+  await fill(page, /enter email/i, c.email, false);
+  await fill(page, /enter phone number/i, c.phone);
+  await fill(page, /enter pincode/i, c.pincode);
 
   await fill(
     page,
@@ -229,12 +210,7 @@ async function basicDetails(page, c) {
     c.aadhaar
   );
 
-  await fill(
-    page,
-    /enter pan number/i,
-    c.pan,
-    false
-  );
+  await fill(page, /enter pan number/i, c.pan, false);
 
   await page.getByRole('button', {
     name: /save\s*&\s*continue/i
@@ -251,7 +227,6 @@ async function basicDetails(page, c) {
 
 // =====================================
 // ADDRESS DROPDOWN HELPER
-// DECLARED ONLY ONCE
 // =====================================
 
 async function addressSelect(page, index, expected, label) {
@@ -271,9 +246,7 @@ async function addressSelect(page, index, expected, label) {
     await selected.textContent().catch(() => '')
   ).trim();
 
-  if (
-    current.toLowerCase() === expected.toLowerCase()
-  ) {
+  if (current.toLowerCase() === expected.toLowerCase()) {
     console.log(
       `[Address] ${label}: ${expected} (already selected)`
     );
@@ -334,56 +307,29 @@ async function addressDetails(page, c) {
 
   if (!addressValue) {
     throw new Error(
-      `Communication address missing for ${c.name}`
+      `Communication Address missing for ${c.name}`
     );
   }
 
-  const byLabel = page.getByRole('textbox', {
-    name: /address line/i
-  }).first();
-
-  const byPlaceholder = page.getByPlaceholder(
-    /address/i
-  ).first();
-
-  let communicationAddress;
-
-  if (await byLabel.isVisible().catch(() => false)) {
-    communicationAddress = byLabel;
-  } else if (
-    await byPlaceholder.isVisible().catch(() => false)
-  ) {
-    communicationAddress = byPlaceholder;
-  } else {
-    const inputs = await page.locator(
-      'input:visible, textarea:visible'
-    ).evaluateAll(elements =>
-      elements.map(el => ({
-        tag: el.tagName,
-        placeholder: el.getAttribute('placeholder'),
-        name: el.getAttribute('name'),
-        id: el.id
-      }))
-    );
-
-    console.log('[Step 2] Visible inputs:', inputs);
-
-    throw new Error(
-      'Address Line input not found. Check terminal.'
-    );
-  }
-
-  await communicationAddress.fill(addressValue);
-
-  await expect(communicationAddress).toHaveValue(
-    addressValue
+  // Confirmed selector from browser inspection
+  const communicationAddress = page.locator(
+    'input[name="address_line"]'
   );
 
-  console.log('[Address] Communication Address filled:', addressValue);
+  await expect(communicationAddress).toBeVisible({
+    timeout: TIMEOUT
+  });
 
+  await communicationAddress.fill(String(addressValue));
 
+  await expect(communicationAddress).toHaveValue(
+    String(addressValue)
+  );
 
-  
+  console.log(
+    '[Address] Communication Address filled:',
+    addressValue
+  );
 
   await addressSelect(
     page, 0, c.country || 'India', 'Country'
@@ -397,7 +343,6 @@ async function addressDetails(page, c) {
     page, 2, c.district || 'Bengaluru Urban', 'District'
   );
 
-  // Copy Communication Address to Permanent Address.
   const sameAddress = page.getByRole('checkbox', {
     name: /same as communication address/i
   });
@@ -410,14 +355,14 @@ async function addressDetails(page, c) {
     await sameAddress.check();
   }
 
-  console.log('[Address] Same as Communication Address checked');
+  console.log(
+    '[Address] Same as Communication Address checked'
+  );
 
-  // Save Address Details.
   await page.getByRole('button', {
     name: /save\s*&\s*continue/i
   }).click();
 
-  // Check whether the application reports validation errors.
   const addressError = page.getByText(
     /address line is required/i
   );
@@ -428,7 +373,6 @@ async function addressDetails(page, c) {
     );
   }
 
-  // Wait for Step 3.
   await expect(
     page.getByText('Additional & Payment', {
       exact: true
@@ -437,6 +381,7 @@ async function addressDetails(page, c) {
 
   console.log('[Step 2] Completed');
 }
+
 // =====================================
 // STEP 3: ADDITIONAL & PAYMENT
 // =====================================
@@ -451,7 +396,9 @@ async function additionalDetails(page, c) {
     false
   );
 
-  const referred = c.referredType || 'Self Joining';
+  const referred = String(
+    c.referredType || 'Self Joining'
+  );
 
   const selected = page.locator(
     '.ant-select-selection-item:visible'
@@ -460,40 +407,114 @@ async function additionalDetails(page, c) {
   }).first();
 
   if (!(await shown(selected))) {
-    const label = page.getByText(
+    // Try a native dropdown with an accessible label.
+    const labeledNative = page.getByLabel(
       /referred type/i
     ).first();
 
-    const item = label.locator(
-      'xpath=ancestor::*[contains(@class,"ant-form-item")][1]'
-    );
-
-    const native = item.locator('select').first();
-
-    if (await shown(native)) {
-      await native.selectOption({
+    if (
+      await shown(labeledNative) &&
+      (await labeledNative.evaluate(
+        el => el.tagName.toLowerCase()
+      )) === 'select'
+    ) {
+      await labeledNative.selectOption({
         label: referred
       });
     } else {
-      const ant = item.locator(
-        '.ant-select'
+      // Find dropdown near the Referred Type label.
+      // Do not assume it uses an ant-form-item wrapper.
+      const label = page.getByText(
+        /referred type/i
       ).first();
 
-      await expect(ant).toBeVisible({
-        timeout: TIMEOUT
-      });
+      const near = label.locator(
+        'xpath=ancestor::*[.//*[contains(@class,"ant-select")]][1]'
+      ).locator(
+        '.ant-select:visible'
+      ).first();
 
-      await ant.locator(
-        '.ant-select-selector'
-      ).click();
+      const allAnt = page.locator(
+        '.ant-select:visible'
+      );
 
-      await page.locator(
-        '.ant-select-dropdown:visible .ant-select-item-option'
-      ).filter({
-        hasText: exact(referred)
-      }).first().click();
+      const allNative = page.locator(
+        'select:visible'
+      );
+
+      let ant = near;
+
+      if (!(await shown(ant))) {
+        const antCount = await allAnt.count();
+        const nativeCount = await allNative.count();
+
+        if (antCount === 1) {
+          ant = allAnt.first();
+        } else if (
+          nativeCount === 1 &&
+          antCount === 0
+        ) {
+          await allNative.first().selectOption({
+            label: referred
+          });
+
+          ant = null;
+        } else {
+          const fields = await page.locator(
+            'select:visible, .ant-select:visible, input:visible'
+          ).evaluateAll(elements =>
+            elements.map(el => ({
+              tag: el.tagName,
+              className:
+                typeof el.className === 'string'
+                  ? el.className
+                  : '',
+              name: el.getAttribute('name'),
+              placeholder: el.getAttribute('placeholder'),
+              text: (el.innerText || '').slice(0, 100)
+            }))
+          );
+
+          console.log(
+            '[Step 3] Available fields:',
+            JSON.stringify(fields, null, 2)
+          );
+
+          throw new Error(
+            'Referred Type control not identified; see Step 3 available fields'
+          );
+        }
+      }
+
+      if (ant) {
+        await ant.locator(
+          '.ant-select-selector'
+        ).click();
+
+        const popup = page.locator(
+          '.ant-select-dropdown:visible'
+        ).last();
+
+        await expect(popup).toBeVisible({
+          timeout: TIMEOUT
+        });
+
+        const option = popup.locator(
+          '.ant-select-item-option'
+        ).filter({
+          hasText: exact(referred)
+        }).first();
+
+        await expect(option).toBeVisible({
+          timeout: TIMEOUT
+        });
+
+        await option.click();
+      }
     }
   }
+
+  console.log('[Step 3] Referred Type:', referred);
 
   if (
     c.collectionArea ||
@@ -516,12 +537,21 @@ async function additionalDetails(page, c) {
       await radio.check();
     }
   } else {
-    await page.getByText(
+    const textOption = page.getByText(
       exact(frequency)
-    ).filter({
-      visible: true
-    }).last().click();
+    ).last();
+
+    await expect(textOption).toBeVisible({
+      timeout: TIMEOUT
+    });
+
+    await textOption.click();
   }
+
+  console.log(
+    '[Step 3] Payment Frequency:',
+    frequency
+  );
 
   const amount = String(
     c.installmentAmount ?? 200
@@ -620,15 +650,50 @@ async function saveCustomer(page, c) {
 
     await page.waitForTimeout(200);
   }
+  console.log('[Save Debug] Current URL:', page.url());
+
+  console.log(
+    '[Save Debug] Visible page text:',
+    (await page.locator('body').innerText())
+      .slice(0, 5000)
+  );
+
+  console.log(
+    '[Save Debug] Current step:',
+    await page.locator(
+      'input[placeholder="First Name"], ' +
+      'input[name="address_line"]'
+    ).evaluateAll(elements =>
+      elements.map(el => ({
+        name: el.getAttribute('name'),
+        placeholder: el.getAttribute('placeholder'),
+        value: el.value
+      }))
+    )
+  );
+
+  await page.screenshot({
+    path: 'customer-save-debug.png',
+    fullPage: true
+  });
 
   throw new Error(
-    `Save outcome not confirmed for ${c.name}`
+    `Save outcome not confirmed for ${c.name}. ` +
+    'See Save Debug logs and customer-save-debug.png'
   );
+
 }
 
 // =====================================
-// MAIN TEST: EXACTLY 10 CUSTOMERS
+// MAIN TEST: 10 CUSTOMERS SEQUENTIALLY
 // =====================================
+
+// Slow browser actions so you can watch the fields being filled.
+test.use({
+  launchOptions: {
+    slowMo: 450
+  }
+});
 
 test(
   'Login once and create 10 customers sequentially',
