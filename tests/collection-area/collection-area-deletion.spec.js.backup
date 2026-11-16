@@ -1,0 +1,551 @@
+
+'use strict';
+
+const { test, expect } = require('@playwright/test');
+require('dotenv').config();
+
+// ========================================
+// CONFIGURATION
+// ========================================
+
+const BASE_URL = (
+  process.env.BASE_URL ||
+  'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com'
+).replace(/\/+$/, '');
+
+const AREA_NAME = (
+  process.env.DELETE_COLLECTION_AREA_NAME || ''
+).trim();
+
+// ========================================
+// LOGIN
+// ========================================
+
+async function loginIfNeeded(page) {
+  console.log('[Login] Opening MyChits Admin');
+
+  await page.goto(BASE_URL, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000
+  });
+
+  const loginHeading = page.getByRole('heading', {
+    name: /admin login/i
+  });
+
+  if (!(await loginHeading.isVisible().catch(() => false))) {
+    console.log('[Login] Already logged in');
+    return;
+  }
+
+  if (!process.env.ADMIN_ID || !process.env.OTP) {
+    throw new Error(
+      'ADMIN_ID and OTP are required in .env'
+    );
+  }
+
+  const branch = page.locator('select').first();
+
+  if (await branch.isVisible().catch(() => false)) {
+    await branch.selectOption({
+      label: process.env.BRANCH_NAME ||
+        'Main Branch (CF-BR-1)'
+    });
+  }
+
+  await page.getByPlaceholder(
+    'XXX-XX-XXXX'
+  ).fill(process.env.ADMIN_ID);
+
+  await page.getByRole('button', {
+    name: /send otp/i
+  }).click();
+
+  const otpInputs = page.locator(
+    'input[autocomplete="one-time-code"], ' +
+    'input[name*="otp" i], ' +
+    'input[placeholder*="otp" i], ' +
+    'input[inputmode="numeric"], ' +
+    'input[maxlength="6"]:visible'
+  );
+
+  await expect(otpInputs.first()).toBeVisible({
+    timeout: 30000
+  });
+
+  const count = await otpInputs.count();
+
+  if (count === 1) {
+    await otpInputs.first().fill(process.env.OTP);
+  } else if (count === process.env.OTP.length) {
+    for (let i = 0; i < count; i++) {
+      await otpInputs.nth(i).fill(process.env.OTP[i]);
+    }
+  } else {
+    throw new Error(
+      `Unexpected OTP input count: ${count}`
+    );
+  }
+
+  await page.getByRole('button', {
+    name: /verify otp|verify|login|submit/i
+  }).last().click();
+
+  await expect(loginHeading).toBeHidden({
+    timeout: 30000
+  });
+
+  console.log('[Login] Successful');
+}
+
+// ========================================
+// CLOSING GROUPS POPUP
+// ========================================
+
+async function closeClosingGroupsPopup(page) {
+  const popup = page.locator(
+    'div.fixed.inset-0.z-\\[9998\\]'
+  ).first();
+
+  const appeared = await popup.waitFor({
+    state: 'visible',
+    timeout: 3000
+  }).then(() => true).catch(() => false);
+
+  if (!appeared) {
+    console.log('[Popup] No Closing Groups popup');
+    return;
+  }
+
+  console.log('[Popup] Groups Closing Soon detected');
+
+  const dontShowAgain = popup.getByRole('button', {
+    name: /don['’]?t show(?: me)? again/i
+  });
+
+  const remindLater = popup.getByRole('button', {
+    name: /remind me later/i
+  });
+
+  if (await dontShowAgain.isVisible().catch(() => false)) {
+    await dontShowAgain.click();
+    console.log("[Popup] Don't show again clicked");
+  } else if (
+    await remindLater.isVisible().catch(() => false)
+  ) {
+    await remindLater.click();
+  } else {
+    throw new Error(
+      'Closing Groups popup dismissal button not found'
+    );
+  }
+
+  await expect(popup).toBeHidden({
+    timeout: 15000
+  });
+
+  console.log('[Popup] Closed');
+}
+
+// ========================================
+// NAVIGATE TO COLLECTION AREA
+// ========================================
+
+async function openCollectionArea(page) {
+  console.log('[Navigation] Opening Collection Area');
+
+  await closeClosingGroupsPopup(page);
+
+  // STEP 1: General Settings
+  const settings = page.getByText(
+    'General Settings',
+    { exact: true }
+  ).first();
+
+  await settings.scrollIntoViewIfNeeded({
+    timeout: 15000
+  });
+
+  await closeClosingGroupsPopup(page);
+  await settings.click();
+
+  console.log('[Navigation] General Settings clicked');
+
+  // STEP 2: Collection Area sidebar menu
+  const sidebarArea = page.getByText(
+    'Collection Area',
+    { exact: true }
+  ).first();
+
+  await expect(sidebarArea).toBeVisible({
+    timeout: 15000
+  });
+
+  await sidebarArea.scrollIntoViewIfNeeded();
+  await sidebarArea.click();
+
+  console.log('[Navigation] Collection Area menu clicked');
+
+  // STEP 3: Handle Collection Management
+  // if it opens before the Collection Area page.
+  const addButton = page.getByRole('button', {
+    name: /add collection area/i
+  }).first();
+
+  if (!(await addButton.isVisible().catch(() => false))) {
+    const areaTab = page.getByRole('tab', {
+      name: /collection area/i
+    }).first();
+
+    if (await areaTab.isVisible().catch(() => false)) {
+      await areaTab.click();
+    } else {
+      const areaText = page.getByText(
+        'Collection Area',
+        { exact: true }
+      ).last();
+
+      await expect(areaText).toBeVisible({
+        timeout: 15000
+      });
+
+      await areaText.click();
+    }
+  }
+
+  await expect(addButton).toBeVisible({
+    timeout: 15000
+  });
+
+  console.log('[Navigation] Collection Area page opened');
+}
+
+// ========================================
+// SEARCH COLLECTION AREA
+// ========================================
+
+
+async function findCollectionArea(page, code) {
+  console.log('[Search] Collection Code:', code);
+
+  const main = page.locator('#app-main-scroll');
+
+  const searchInput = main.locator(
+    'input[placeholder^="Search" i]:visible'
+  ).first();
+
+  await expect(searchInput).toBeVisible();
+
+  await searchInput.fill(code);
+
+  // Match Collection Code in the second data column.
+  const row = main.locator('table tbody tr').filter({
+    has: page.locator('td:nth-child(2)').getByText(
+      code,
+      { exact: true }
+    )
+  });
+
+  await expect(row).toHaveCount(1, {
+    timeout: 20000
+  });
+
+  const areaName = (
+    await row.locator('td').nth(2).innerText()
+  ).trim();
+
+  console.log('[Found] Collection Code:', code);
+  console.log('[Found] Collection Area Name:', areaName);
+
+  return { row, areaName };
+}
+// ========================================
+// CLICK THREE DOTS AND DELETE OPTION
+// ========================================
+
+async function openActionMenu(row, page) {
+  console.log('[Action] Opening three-dots menu');
+
+  await expect(row).toHaveCount(1);
+
+  // The Action column is the last column.
+  const actionCell = row.locator('td').last();
+
+  await expect(actionCell).toBeVisible({
+    timeout: 15000
+  });
+
+  // Prefer a clickable control inside the Action cell.
+  const actionControl = actionCell.locator(
+    'button, [role="button"], [aria-haspopup]'
+  ).first();
+
+  if (await actionControl.isVisible().catch(() => false)) {
+    await actionControl.click();
+  } else {
+    // Some table implementations use a clickable
+    // div/span or an icon without a button wrapper.
+    const icon = actionCell.locator(
+      'svg, [class*="ellipsis"], ' +
+      '[class*="more"], [class*="dots"]'
+    ).first();
+
+    if (await icon.isVisible().catch(() => false)) {
+      await icon.click();
+    } else {
+      // The screenshot shows only the three-dots
+      // control in this Action cell.
+      await actionCell.click();
+    }
+  }
+
+  console.log('[Action] Three dots clicked');
+
+  // Find Delete in the opened menu.
+  const menuDelete = page.getByRole('menuitem', {
+    name: /^delete$/i
+  }).first();
+
+  if (await menuDelete.isVisible().catch(() => false)) {
+    await menuDelete.click();
+  } else {
+    const deleteText = page.getByText(
+      'Delete',
+      { exact: true }
+    ).last();
+
+    await expect(deleteText).toBeVisible({
+      timeout: 10000
+    });
+
+    await deleteText.click();
+  }
+
+  console.log('[Action] Delete option clicked');
+}
+
+// ========================================
+// DELETE CONFIRMATION
+// ========================================
+
+async function confirmDeletion(page, name) {
+  console.log('[Delete] Waiting for confirmation popup');
+
+  const dialog = page.locator(
+    '[role="dialog"]:visible, ' +
+    '[role="alertdialog"]:visible, ' +
+    '.ant-modal:visible'
+  ).last();
+
+  // Some custom modals use a fixed overlay.
+  const fallback = page.locator(
+    'div.fixed.inset-0:visible'
+  ).filter({
+    has: page.getByRole('button', {
+      name: /^delete$/i
+    })
+  }).last();
+
+  let modal;
+
+  if (await dialog.isVisible().catch(() => false)) {
+    modal = dialog;
+  } else {
+    await expect(fallback).toBeVisible({
+      timeout: 15000
+    });
+
+    modal = fallback;
+  }
+
+  console.log('[Delete] Confirmation popup opened');
+
+  // The confirmation popup should have one text
+  // input for typing the Collection Area name.
+  const input = modal.locator(
+    'input[type="text"]:visible, ' +
+    'input:not([type]):visible'
+  );
+
+  await expect(input).toHaveCount(1, {
+    timeout: 10000
+  });
+
+  await input.fill(name);
+
+  await expect(input).toHaveValue(name);
+
+  console.log('[Delete] Exact Collection Area name entered');
+
+  const deleteButton = modal.getByRole('button', {
+    name: /^delete$/i
+  }).last();
+
+  await expect(deleteButton).toBeVisible({
+    timeout: 10000
+  });
+
+  await expect(deleteButton).toBeEnabled();
+
+  await deleteButton.click();
+
+  console.log('[Delete] Final Delete button clicked');
+
+  await expect(modal).toBeHidden({
+    timeout: 20000
+  });
+}
+
+// ========================================
+// MAIN TEST
+// ========================================
+
+test('Delete an automated collection area', async ({ page }) => {
+  test.setTimeout(180000);
+
+  page.setDefaultTimeout(15000);
+
+  // Safety: only delete an explicitly named
+  // automation-created Collection Area.
+
+
+test('Delete collection area by code', async ({ page }) => {
+  test.setTimeout(180000);
+  page.setDefaultTimeout(15000);
+
+  const areaCode = 'MCF-CO-AR-8';
+
+  console.log('[Target Code]', areaCode);
+
+  // STEP 1: Login
+  await loginIfNeeded(page);
+
+  // STEP 2: Close Groups Closing Soon popup
+  await closeClosingGroupsPopup(page);
+
+  // STEP 3: Open Collection Area page
+  await openCollectionArea(page);
+
+  // STEP 4: Search using Collection Area Code
+  const { row, areaName } = await findCollectionArea(
+    page,
+    areaCode
+  );
+
+  console.log('[Found] Collection Area:', areaName);
+
+  // Safety: confirm the selected record is intended.
+  // Set EXPECTED_DELETE_COLLECTION_AREA_NAME in .env.
+  const expectedName = (
+    process.env.EXPECTED_DELETE_COLLECTION_AREA_NAME || ''
+  ).trim();
+
+  if (!expectedName) {
+    throw new Error(
+      'Set EXPECTED_DELETE_COLLECTION_AREA_NAME in .env ' +
+      'to confirm which Collection Area should be deleted.'
+    );
+  }
+
+  if (areaName !== expectedName) {
+    throw new Error(
+      `Name mismatch. Expected "${expectedName}", ` +
+      `but found "${areaName}". Deletion cancelled.`
+    );
+  }
+
+  // STEP 5: Click three dots and select Delete
+  await openActionMenu(row, page);
+
+  // STEP 6: Enter Collection Area Name and delete
+  await confirmDeletion(page, areaName);
+
+  // STEP 7: Verify record is no longer displayed
+  const main = page.locator('#app-main-scroll');
+
+  const searchInput = main.locator(
+    'input[placeholder^="Search" i]:visible'
+  ).first();
+
+  await searchInput.fill('');
+  await searchInput.fill(areaCode);
+
+  const matchingRows = main.locator(
+    'table tbody tr'
+  ).filter({
+    has: page.locator('td:nth-child(2)').getByText(
+      areaCode,
+      { exact: true }
+    )
+  });
+
+  await expect(matchingRows).toHaveCount(0, {
+    timeout: 20000
+  });
+
+  console.log(
+    '[Completed] Collection Area no longer listed:',
+    areaCode,
+    '| Name:',
+    areaName
+  );
+});
+  console.log('[Target]', AREA_NAME);
+
+  // STEP 1: Login once.
+  await loginIfNeeded(page);
+
+  // STEP 2: Dismiss Closing Groups popup.
+  await closeClosingGroupsPopup(page);
+
+  // STEP 3: Open Collection Area page.
+  await openCollectionArea(page);
+
+  // STEP 4: Search using Collection Area page
+  // Search... field (not Filter Employee).
+  const { row, areaName } = await findCollectionArea(
+    page,
+    AREA_CODE
+  );
+
+  // STEP 5: Click row's three dots and Delete.
+  await openActionMenu(row, page);
+
+  // STEP 6: Enter exact name and confirm.
+  const AREA_CODE = (
+  process.env.DELETE_COLLECTION_AREA_CODE || ''
+   ).trim();
+
+  // STEP 7: Verify deletion.
+  // Re-enter the search to confirm the table
+  // no longer contains the target record.
+  const main = page.locator('#app-main-scroll');
+
+  const searchInput = main.locator(
+    'input[placeholder^="Search" i]:visible'
+  ).first();
+
+  await expect(searchInput).toBeVisible();
+
+  await searchInput.fill('');
+
+  await searchInput.fill(AREA_NAME);
+
+  const matchingRows = main.locator(
+    'table tbody tr'
+  ).filter({
+    has: page.locator('td:nth-child(3)').getByText(
+      AREA_NAME,
+      { exact: true }
+    )
+  });
+
+  await expect(matchingRows).toHaveCount(0, {
+    timeout: 20000
+  });
+
+  console.log(
+    '[Completed] Collection Area no longer listed:',
+    AREA_NAME
+  );
+});
