@@ -14,9 +14,8 @@ test('Delete My Created Guarantors', async ({ page }) => {
     'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/';
 
   const guarantors = [
-    'Testraju V',
-    'Testrajesh V',
-    'Testvasundara A N'
+    'Testgopinathe Rao',
+    'Testraju V'
   ];
 
   // STEP 1: Open Guarantor page
