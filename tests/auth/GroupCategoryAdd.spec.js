@@ -1,6 +1,7 @@
 
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+require('dotenv').config();
 
 test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
@@ -10,13 +11,12 @@ test('Add Two Group Categories', async ({ page }) => {
 
   test.setTimeout(300000);
 
-  const baseURL =
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/';
+  const baseURL = process.env.BASE_URL;
 
   await page.goto(baseURL);
   await page.waitForTimeout(3000);
 
-  await page.goto(baseURL + 'group-menu');
+  await page.goto(`${baseURL}group-menu`);
   await page.waitForTimeout(5000);
 
   if (await page.getByText('Admin Login', { exact: true }).isVisible().catch(() => false)) {

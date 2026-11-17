@@ -1,4 +1,6 @@
 
+require('dotenv').config();
+
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
@@ -10,8 +12,7 @@ test('Create and Accept Bid Request', async ({ page, context }) => {
 
   test.setTimeout(300000);
 
-  const baseURL =
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com';
+  const baseURL = process.env.BASE_URL.replace(/\/$/, '');
 
   const customerName = 'Blr-kholi';
   const mobileNumber = '9633232158';
@@ -186,7 +187,6 @@ test('Create and Accept Bid Request', async ({ page, context }) => {
   console.log('Accept clicked');
 
   // Step 17: Approve Request Confirmation
-  // After clicking Accept, the Approve Request popup appears.
   // Click YES directly. Do not click Save Changes.
 
   await expect(
