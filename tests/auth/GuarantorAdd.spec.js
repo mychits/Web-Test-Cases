@@ -1,6 +1,7 @@
 
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+require('dotenv').config();
 
 test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
@@ -10,12 +11,14 @@ test('Add Three New Guarantors', async ({ page }) => {
 
   test.setTimeout(300000);
 
+  const baseURL = process.env.BASE_URL;
+
   // Open website
-  await page.goto('http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/');
+  await page.goto(baseURL);
   await page.waitForTimeout(2000);
 
   // Open Guarantor page
-  await page.goto('http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/legals-menu/guarantor');
+  await page.goto(`${baseURL}legals-menu/guarantor`);
   await page.waitForTimeout(3000);
 
   console.log('Guarantor page opened');
