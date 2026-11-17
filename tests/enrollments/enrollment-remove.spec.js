@@ -1,6 +1,7 @@
 
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+require('dotenv').config();
 
 test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
@@ -10,10 +11,7 @@ test('Remove Enrollment - World Cricket - Blr-trtrf', async ({ page }) => {
 
   test.setTimeout(300000);
 
-  const baseURL = (
-    process.env.BASE_URL ||
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com'
-  ).replace(/\/+$/, '');
+  const baseURL = process.env.BASE_URL.replace(/\/+$/, '');
 
   // Step 1: Open Dashboard
   await page.goto(`${baseURL}/dashboard`, {
