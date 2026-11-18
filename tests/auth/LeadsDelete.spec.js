@@ -1,6 +1,7 @@
 
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+require('dotenv').config();
 
 test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
@@ -9,8 +10,7 @@ test.use({
 test('Delete My Created Leads', async ({ page }) => {
   test.setTimeout(120000);
 
-  const baseURL =
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/';
+  const baseURL = process.env.BASE_URL;
 
   const leads = [
     { name: 'Jack Rahul', phone: '9576501036' },
