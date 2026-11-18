@@ -1,365 +1,388 @@
 
+require('dotenv').config();
+
 const { test, expect } = require('@playwright/test');
 const path = require('path');
-require('dotenv').config();
+const employees = require('../../test-data/employee');
 
 test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
 });
 
-test('Add Three Employees and Verify Each Employee', async ({ page }) => {
-  test.setTimeout(240000);
+test('Add All Employees and Verify Each Employee in List API', async ({ page }) => {
 
-  const baseURL = process.env.BASE_URL;
-
-  const dashboardURL = `${baseURL}dashboard`;
+  test.setTimeout(3600000);
 
   const employeeURL =
-    `${baseURL}staff-menu/employee-menu/employee`;
+    `${process.env.BASE_URL}staff-menu/employee-menu/employee`;
 
-  const employees = [
-    {
-      name: 'Jack Kiran',
-      email: 'jack.kiran.test01@example.com',
-      phone: '9876501001',
-      password: 'Test@Jack101',
-      pincode: '560001',
-      aadhaar: '234567890123',
-      pan: 'ABCTY1234D',
-      address: 'Test Address 101, Bengaluru',
-      designation: 'Full Stack Developer',
-      status: 'Active',
-      joiningDate: '2026-11-01',
-      dob: '1995-05-15',
-      gender: 'Male',
-      salary: '25000',
-      alternatePhone: '9876502001',
-      leaves: '12',
-      emergencyContact: 'Kiran Kumar'
-    },
-    {
-      name: 'Jack Praveen',
-      email: 'jack.praveen.test02@example.com',
-      phone: '9876501002',
-      password: 'Test@Jack102',
-      pincode: '560002',
-      aadhaar: '345678901234',
-      pan: 'BCDTY2345E',
-      address: 'Test Address 102, Bengaluru',
-      designation: 'Full Stack Developer',
-      status: 'Active',
-      joiningDate: '2026-11-02',
-      dob: '1996-08-20',
-      gender: 'Male',
-      salary: '28000',
-      alternatePhone: '9876502002',
-      leaves: '15',
-      emergencyContact: 'Praveen Kumar'
-    },
-    {
-      name: 'Jack Rohan',
-      email: 'jack.rohan.test03@example.com',
-      phone: '9876501003',
-      password: 'Test@Jack103',
-      pincode: '560003',
-      aadhaar: '456789012345',
-      pan: 'CDETY3456F',
-      address: 'Test Address 103, Bengaluru',
-      designation: 'Full Stack Developer',
-      status: 'Active',
-      joiningDate: '2026-11-03',
-      dob: '1997-12-10',
-      gender: 'Male',
-      salary: '30000',
-      alternatePhone: '9876502003',
-      leaves: '10',
-      emergencyContact: 'Rohan Kumar'
-    }
-  ];
+  const successfulEmployees = [];
+  const failedEmployees = [];
 
-  let successCount = 0;
+  // The first five employees were already submitted successfully.
+  // Continue from employee 6 to avoid submitting those five again.
+  const START_INDEX = 0;
 
-  // STEP 1: Open Dashboard
-  await page.goto(dashboardURL, {
-    waitUntil: 'domcontentloaded',
-    timeout: 45000
-  });
 
-  console.log('Dashboard opened:', page.url());
+  const ADD_API =
+    '/api/agent/add-addtional-employee-info';
 
-  // STEP 2: Open Employee Page
-  await page.goto(employeeURL, {
-    waitUntil: 'domcontentloaded',
-    timeout: 45000
-  });
+  const LIST_API =
+    '/api/agent/get-additional-employee-info';
 
-  console.log('Employee page opened:', page.url());
+  // Open Dashboard
+  await page.goto(`${process.env.BASE_URL}dashboard`);
+  await page.waitForLoadState('domcontentloaded');
 
-  // STEP 3: Search Employee in Table
-  async function findEmployee(employeeName) {
-    const searchBox = page.getByPlaceholder('Search...').first();
+  console.log('Dashboard opened successfully.');
 
-    await expect(searchBox).toBeVisible({ timeout: 15000 });
+  // Open Employee page
+  await page.goto(employeeURL);
+  await page.waitForLoadState('domcontentloaded');
 
-    await searchBox.fill(employeeName);
+  await expect(
+    page.getByRole('button', { name: /Add Employee/i }).last()
+  ).toBeVisible({ timeout: 30000 });
 
-    await page.waitForTimeout(1000);
+  console.log('Employee page opened successfully.');
+  console.log('Total Employees:', employees.length);
+  console.log('Starting from employee:', START_INDEX + 1);
 
-    const matchingRow = page.locator('table tbody tr').filter({
-      hasText: employeeName
-    });
+  for (let i = START_INDEX; i < employees.length; i++) {
 
-    const found = await matchingRow.count() > 0;
+    const employee = employees[i];
 
-    if (found) {
-      console.log(`Employee found: ${employeeName}`);
-      return true;
-    }
+    console.log('\n================================');
+    console.log(`Employee ${i + 1}/${employees.length}`);
+    console.log('Name:', employee.name);
+    console.log('================================');
 
-    console.log(`Employee not found: ${employeeName}`);
-    return false;
-  }
+    try {
 
-  // STEP 4: Open Add Employee Form
-  async function openAddEmployeeForm() {
-    const addButton = page.getByRole('button', {
-      name: /add employee/i
-    });
+      // Click Add Employee
+      await page
+        .getByRole('button', { name: /Add Employee/i })
+        .last()
+        .click();
 
-    await expect(addButton).toBeVisible({ timeout: 15000 });
+      // Wait for employee form
+      const nameField = page.getByPlaceholder('Enter the Full Name');
 
-    await addButton.click();
+      await expect(nameField).toBeVisible({ timeout: 20000 });
 
-    await expect(
-      page.getByPlaceholder('Enter the Full Name', {
-        exact: true
-      })
-    ).toBeVisible({ timeout: 15000 });
+      console.log('Employee form opened.');
 
-    console.log('Add Employee form opened.');
-  }
+      // Fill Basic Details
+      await nameField.fill(employee.name);
 
-  // STEP 5: Fill Text Fields
-  async function fillField(placeholder, value) {
-    const field = page.getByPlaceholder(placeholder, {
-      exact: true
-    });
+      await page
+        .getByPlaceholder('Enter Email')
+        .fill(employee.email);
 
-    await expect(field).toBeVisible({ timeout: 15000 });
-    await expect(field).toBeEnabled({ timeout: 15000 });
+      await page
+        .getByPlaceholder('Enter Phone Number')
+        .fill(String(employee.phone));
 
-    await field.fill(String(value));
+      await page
+        .getByPlaceholder('Enter Password')
+        .fill(employee.password);
 
-    console.log(`Filled: ${placeholder}`);
-  }
+      await page
+        .getByPlaceholder('Enter Pincode')
+        .fill(String(employee.pincode));
 
-  // STEP 6: Select Dropdown Values
-  async function selectField(labelText, value) {
-    const label = page.locator('label').filter({
-      hasText: new RegExp(`^${labelText}\\s*\\*?`, 'i')
-    }).last();
+      await page
+        .getByPlaceholder('Enter Adhaar Number')
+        .fill(String(employee.aadhaar));
 
-    await expect(label).toBeVisible({ timeout: 10000 });
+      await page
+        .getByPlaceholder('Enter Pan Number')
+        .fill(employee.pan);
 
-    const dropdown = label.locator(
-      'xpath=following::*[self::select or @role="combobox" or contains(@class,"select")][1]'
-    );
+      await page
+        .getByPlaceholder('Enter the Address')
+        .fill(employee.address);
 
-    await expect(dropdown).toBeVisible({ timeout: 10000 });
+      console.log('Basic details filled.');
 
-    const tagName = await dropdown.evaluate(element =>
-      element.tagName.toLowerCase()
-    );
+      // Select Designation
+      const designationField = page
+        .locator('label')
+        .filter({ hasText: /^Designation/i })
+        .last()
+        .locator('xpath=following::div[contains(@class,"ant-select")][1]');
 
-    if (tagName === 'select') {
-      await dropdown.selectOption({ label: value });
-    } else {
-      await dropdown.click();
+      await designationField.click();
 
-      const option = page.getByText(value, {
-        exact: true
-      }).last();
+      await page
+        .getByText(employee.designation, { exact: true })
+        .last()
+        .click();
 
-      await expect(option).toBeVisible({ timeout: 10000 });
-      await option.click();
-    }
+      console.log('Designation selected:', employee.designation);
 
-    console.log(`${labelText} selected: ${value}`);
-  }
+      // Select Status
+      const statusField = page
+        .locator('label')
+        .filter({ hasText: /^Status/i })
+        .last()
+        .locator('xpath=following::div[contains(@class,"ant-select")][1]');
 
-  // STEP 7: Fill Date Fields
-  async function fillDateFields(employee) {
-    const dateFields = page.locator('input[type="date"]');
+      await statusField.click();
 
-    await expect(dateFields).toHaveCount(3, {
-      timeout: 10000
-    });
+      await page
+        .getByText(employee.status, { exact: true })
+        .last()
+        .click();
 
-    // Joining Date
-    await dateFields.nth(0).fill(employee.joiningDate);
+      console.log('Status selected:', employee.status);
 
-    console.log(`Joining Date selected: ${employee.joiningDate}`);
+      // Joining Date
+      await page
+        .locator('input[type="date"]')
+        .nth(0)
+        .fill(employee.joiningDate);
 
-    // Leaving Date is optional, so leave it empty.
+      // Date of Birth
+      await page
+        .locator('input[type="date"]')
+        .nth(2)
+        .fill(employee.dob);
 
-    // Date of Birth
-    await dateFields.nth(2).fill(employee.dob);
+      console.log('Joining Date and DOB filled.');
 
-    console.log(`Date of Birth selected: ${employee.dob}`);
-  }
+      // Select Gender
+      const genderField = page
+        .locator('label')
+        .filter({ hasText: /^Gender/i })
+        .last()
+        .locator('xpath=following::div[contains(@class,"ant-select")][1]');
 
-  // STEP 8: Fill Allocated Leaves
-  async function fillAllocatedLeaves(value) {
-    const label = page.locator('label').filter({
-      hasText: /^Total Allocated Leaves/i
-    }).last();
+      await genderField.click();
 
-    await expect(label).toBeVisible({ timeout: 10000 });
+      await page
+        .getByText(employee.gender, { exact: true })
+        .last()
+        .click();
 
-    const field = label.locator('xpath=following::input[1]');
+      console.log('Gender selected:', employee.gender);
 
-    await expect(field).toBeVisible({ timeout: 10000 });
+      // Salary
+      await page
+        .getByPlaceholder('Enter Your Salary')
+        .fill(String(employee.salary));
 
-    await field.fill(String(value));
+      // Alternate Phone
+      await page
+        .getByPlaceholder('Enter Alternate Phone Number')
+        .fill(String(employee.alternatePhone));
 
-    console.log(`Total Allocated Leaves: ${value}`);
-  }
+      // Total Allocated Leaves
+      await page
+        .locator('label')
+        .filter({ hasText: /^Total Allocated Leaves/i })
+        .last()
+        .locator('xpath=following::input[1]')
+        .fill(String(employee.totalLeaves));
 
-  // STEP 9: Add One Employee
-  async function addEmployee(employee) {
-    console.log('--------------------------------');
-    console.log(`Adding employee: ${employee.name}`);
+      // Emergency Contact Person
+      await page
+        .getByPlaceholder('Enter Emergency Contact Person Name')
+        .fill(employee.emergencyContact);
 
-    // Required text fields
-    await fillField('Enter the Full Name', employee.name);
-    await fillField('Enter Email', employee.email);
-    await fillField('Enter Phone Number', employee.phone);
-    await fillField('Enter Password', employee.password);
-    await fillField('Enter Pincode', employee.pincode);
-    await fillField('Enter Adhaar Number', employee.aadhaar);
-    await fillField('Enter Pan Number', employee.pan);
-    await fillField('Enter the Address', employee.address);
+      console.log('All employee details filled.');
 
-    // Required dropdown fields
-    await selectField('Designation', employee.designation);
-    await selectField('Status', employee.status);
-
-    // Required date fields
-    await fillDateFields(employee);
-
-    // Required Gender dropdown
-    await selectField('Gender', employee.gender);
-
-    // Remaining required fields
-    await fillField('Enter Your Salary', employee.salary);
-
-    await fillField(
-      'Enter Alternate Phone Number',
-      employee.alternatePhone
-    );
-
-    await fillAllocatedLeaves(employee.leaves);
-
-    await fillField(
-      'Enter Emergency Contact Person Name',
-      employee.emergencyContact
-    );
-
-    // STEP 10: Save Employee
-    const saveButton = page.getByRole('button', {
-      name: /^Save Employee$/i
-    });
-
-    await expect(saveButton).toBeVisible({ timeout: 15000 });
-    await expect(saveButton).toBeEnabled({ timeout: 15000 });
-
-    await saveButton.click();
-
-    console.log(`Save Employee clicked: ${employee.name}`);
-
-    await page.waitForTimeout(2000);
-
-    // Check whether the form has closed
-    const nameField = page.getByPlaceholder(
-      'Enter the Full Name',
-      { exact: true }
-    );
-
-    const formStillOpen = await nameField.isVisible().catch(() => false);
-
-    if (formStillOpen) {
-      const errors = await page.locator(
-        '.ant-form-item-explain-error, [role="alert"]'
-      ).allTextContents();
-
-      throw new Error(
-        `Employee save not confirmed: ${employee.name}. ` +
-        `Form is still open. Validation errors: ${errors.join(' | ') || 'No visible validation message'}`
+      // Wait for Add Employee API response
+      const addResponsePromise = page.waitForResponse(
+        response =>
+          response.url().includes(ADD_API) &&
+          response.request().method() === 'POST',
+        { timeout: 30000 }
       );
-    }
 
-    console.log(`Employee form closed: ${employee.name}`);
+      // Save Employee
+      await page
+        .getByRole('button', { name: /^Save Employee$/i })
+        .click();
+
+      const addResponse = await addResponsePromise;
+
+      let addResult;
+
+      try {
+        addResult = await addResponse.json();
+      } catch (error) {
+        throw new Error('Could not read Add Employee API response.');
+      }
+
+      console.log('Add API Status:', addResponse.status());
+      console.log('Add API Message:', addResult.message);
+
+      if (!addResponse.ok() || addResult.status !== true) {
+        throw new Error(
+          addResult.message || 'Employee creation API failed.'
+        );
+      }
+
+      const employeeCode =
+        addResult.employee?.employeeCode;
+
+      console.log('Employee Code:', employeeCode);
+
+      if (!employeeCode) {
+        throw new Error(
+          'Add API did not return an employee code. Cannot verify this employee.'
+        );
+      }
+
+      // Wait for the form to close
+      await expect(nameField).toBeHidden({ timeout: 20000 });
+
+      console.log('Employee saved. Checking Employee List API...');
+
+      // Check Employee List API up to 3 times
+      let employeeFound = false;
+      let latestListCount = 0;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+
+        console.log(`List API verification attempt: ${attempt}/3`);
+
+        // Reload the page to trigger the actual Employee List API request
+        const listResponsePromise = page.waitForResponse(
+          response =>
+            response.url().includes(LIST_API) &&
+            response.request().method() === 'GET',
+          { timeout: 30000 }
+        );
+
+        await page.reload();
+        await page.waitForLoadState('domcontentloaded');
+
+        const listResponse = await listResponsePromise;
+
+        console.log('List API Status:', listResponse.status());
+
+        if (!listResponse.ok()) {
+          throw new Error(
+            `Employee List API returned ${listResponse.status()}.`
+          );
+        }
+
+        const listResult = await listResponse.json();
+
+        const employeeList = Array.isArray(listResult.employee)
+          ? listResult.employee
+          : [];
+
+        latestListCount = employeeList.length;
+
+        console.log('Employee List Record Count:', latestListCount);
+
+        employeeFound = employeeList.some(
+          item => item.employeeCode === employeeCode
+        );
+
+        if (employeeFound) {
+          break;
+        }
+
+        console.log(
+          `${employeeCode} is not in the list yet. Waiting before retry...`
+        );
+
+        await page.waitForTimeout(3000);
+      }
+
+      if (!employeeFound) {
+
+        failedEmployees.push({
+          name: employee.name,
+          employeeCode: employeeCode,
+          reason: 'Add API returned success, but Employee List API did not contain this employee after 3 checks.'
+        });
+
+        console.log('EMPLOYEE NOT VERIFIED:', employee.name);
+        console.log('Employee Code:', employeeCode);
+
+        console.log(
+          'Stopping the test to avoid submitting more employees while the list API is not showing saved records.'
+        );
+
+        break;
+      }
+
+      successfulEmployees.push({
+        name: employee.name,
+        employeeCode: employeeCode
+      });
+
+      console.log('EMPLOYEE ADDED AND VERIFIED:', employee.name);
+      console.log('Verified Employee Code:', employeeCode);
+
+      // Wait for Add Employee button before next employee
+      await expect(
+        page.getByRole('button', { name: /Add Employee/i }).last()
+      ).toBeVisible({ timeout: 30000 });
+
+    } catch (error) {
+
+      failedEmployees.push({
+        name: employee.name,
+        reason: error.message
+      });
+
+      console.log('EMPLOYEE FAILED:', employee.name);
+      console.log('ERROR:', error.message);
+
+      // Try to close the form if it is still open
+      try {
+        const cancelButton = page.getByRole('button', {
+          name: /Cancel/i
+        }).last();
+
+        if (await cancelButton.isVisible()) {
+          await cancelButton.click();
+        }
+      } catch (closeError) {
+        console.log('Could not close the employee form.');
+      }
+
+      // Stop rather than risk submitting more employees after an error
+      break;
+    }
   }
 
-  // STEP 11: Process Three Employees
-  for (const employee of employees) {
-    console.log('--------------------------------');
-    console.log(`Processing: ${employee.name}`);
+  // Final Summary
+  console.log('\n================================');
+  console.log('EMPLOYEE ADD SUMMARY');
+  console.log('================================');
 
-    await page.goto(employeeURL, {
-      waitUntil: 'domcontentloaded'
-    });
+  console.log('Total Employees in Data:', employees.length);
+  console.log('Successfully Added and Verified:', successfulEmployees.length);
+  console.log('Failed or Not Verified:', failedEmployees.length);
 
-    // Check whether employee already exists
-    const alreadyExists = await findEmployee(employee.name);
+  console.log('\nSuccessfully Added and Verified Employees:');
 
-    if (alreadyExists) {
-      console.log(`SKIPPED: ${employee.name} already exists.`);
-      successCount++;
-      continue;
-    }
-
-    // Clear table search
-    await page.getByPlaceholder('Search...').first().clear();
-
-    // Open Add Employee form
-    await openAddEmployeeForm();
-
-    // Fill and save
-    await addEmployee(employee);
-
-    // Refresh employee table
-    await page.waitForTimeout(1500);
-
-    await page.reload({
-      waitUntil: 'domcontentloaded'
-    });
-
-    await page.waitForTimeout(1500);
-
-    // Verify saved employee
-    const isSaved = await findEmployee(employee.name);
-
-    if (!isSaved) {
-      throw new Error(
-        `Employee "${employee.name}" was not found after saving.`
-      );
-    }
-
-    successCount++;
-
-    console.log(`SUCCESS: ${employee.name} verified.`);
+  successfulEmployees.forEach((employee, index) => {
     console.log(
-      `Verified Employees: ${successCount}/${employees.length}`
+      `${index + 1}. ${employee.name} - ${employee.employeeCode}`
     );
-  }
+  });
 
-  // STEP 12: Final Result
-  console.log('--------------------------------');
+  console.log('\nFailed or Not Verified Employees:');
 
-  console.log(
-    `FINAL RESULT: ${successCount}/${employees.length} employees verified.`
-  );
+  failedEmployees.forEach((employee, index) => {
+    console.log(
+      `${index + 1}. ${employee.name} - ${employee.employeeCode || 'No code'} - ${employee.reason}`
+    );
+  });
 
-  expect(successCount).toBe(employees.length);
+  console.log('================================');
+
+  expect(
+    failedEmployees,
+    'Some employees could not be added and verified. Check the terminal output.'
+  ).toHaveLength(0);
+
 });

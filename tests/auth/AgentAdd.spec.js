@@ -4,47 +4,17 @@ require('dotenv').config();
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
+const agents = require('../../test-data/agent');
+
 test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
 });
 
-test('Add Three Agents and Verify Each Agent', async ({ page }) => {
-  test.setTimeout(240000);
+test('Add 100 Agents and Verify Each Agent', async ({ page }) => {
+  test.setTimeout(1500000); // 25 minutes
 
-  const agentURL = `${process.env.BASE_URL}staff-menu/agent-menu/agent`;
-
-  const agents = [
-    {
-      name: 'Jack Aravind',
-      email: 'jack.aravind@example.com',
-      phone: '9000000001',
-      pincode: '560001',
-      aadhaar: '111122223333',
-      pan: 'ABCDE1234F',
-      address: '12 Sample Street, Bengaluru',
-      designation: 'Full Stack Developer'
-    },
-    {
-      name: 'Jack Naveen',
-      email: 'jack.naveen@example.com',
-      phone: '9000000002',
-      pincode: '560002',
-      aadhaar: '222233334444',
-      pan: 'BCDEF2345G',
-      address: '24 Example Road, Bengaluru',
-      designation: 'Full Stack Developer'
-    },
-    {
-      name: 'Jack Suresh',
-      email: 'jack.suresh@example.com',
-      phone: '9000000003',
-      pincode: '560003',
-      aadhaar: '333344445555',
-      pan: 'CDEFG3456H',
-      address: '36 Demo Avenue, Bengaluru',
-      designation: 'Full Stack Developer'
-    }
-  ];
+  const baseURL = process.env.BASE_URL.replace(/\/+$/, '');
+  const agentURL = `${baseURL}/staff-menu/agent-menu/agent`;
 
   let successCount = 0;
 
@@ -69,6 +39,7 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
   }
 
   console.log('Login session active.');
+  console.log(`Total agents to process: ${agents.length}`);
 
   // STEP 3: Search for an agent across all table pages
   async function findAgentAcrossPages(agentName) {
@@ -107,7 +78,6 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
       }
 
       await nextPage.click();
-
       await page.waitForTimeout(1000);
     }
 
@@ -191,9 +161,11 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
   }
 
   // STEP 7: Process each agent
-  for (const agent of agents) {
+  for (const [index, agent] of agents.entries()) {
     console.log('--------------------------------');
-    console.log(`Processing agent: ${agent.name}`);
+    console.log(
+      `Processing agent ${index + 1}/${agents.length}: ${agent.name}`
+    );
 
     // Check if agent already exists before adding
     const alreadyExists = await findAgentAcrossPages(agent.name);
@@ -230,7 +202,7 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
     await fillField('Enter Pan Number', agent.pan);
     await fillField('Enter the Address', agent.address);
 
-    // Select designation
+    // Select designation from agent.js
     await selectDesignation(agent.designation);
 
     // Click Save Agent
