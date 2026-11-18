@@ -1,4 +1,6 @@
 
+require('dotenv').config();
+
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
@@ -9,12 +11,11 @@ test.use({
 test('Add Three Agents and Verify Each Agent', async ({ page }) => {
   test.setTimeout(240000);
 
-  const agentURL =
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/staff-menu/agent-menu/agent';
+  const agentURL = `${process.env.BASE_URL}staff-menu/agent-menu/agent`;
 
   const agents = [
     {
-      name: 'Jack Aravind',
+      name: 'jack aravind',
       email: 'jack.aravind@example.com',
       phone: '9000000001',
       pincode: '560001',
@@ -24,7 +25,7 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
       designation: 'Full Stack Developer'
     },
     {
-      name: 'Jack Naveen',
+      name: 'jack naveen',
       email: 'jack.naveen@example.com',
       phone: '9000000002',
       pincode: '560002',
@@ -34,7 +35,7 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
       designation: 'Full Stack Developer'
     },
     {
-      name: 'Jack Suresh',
+      name: 'jack suresh',
       email: 'jack.suresh@example.com',
       phone: '9000000003',
       pincode: '560003',
@@ -307,8 +308,3 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
 
   expect(successCount).toBe(agents.length);
 });
-
-
-
-
-

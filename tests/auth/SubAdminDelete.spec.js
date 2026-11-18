@@ -1,4 +1,6 @@
 
+require('dotenv').config();
+
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
@@ -9,8 +11,7 @@ test.use({
 test('Delete Five Sub Admins - MyChits', async ({ page }) => {
   test.setTimeout(240000);
 
-  const baseURL =
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com';
+  const baseURL = process.env.BASE_URL.replace(/\/+$/, '');
 
   const subAdmins = [
     'Jack Rahul',

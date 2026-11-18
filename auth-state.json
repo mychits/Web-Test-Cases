@@ -2,13 +2,12 @@
   "cookies": [],
   "origins": [
     {
-      "origin": "http://13.48.10.236",
+      "origin": "http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/staff-menu/agent-menu/agent",
       "localStorage": [
         {
           "name": "token",
           "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNmFiMzg5MTQ2Y2EzZDdlNzEyZmFlMjRiIiwiaWF0IjoxNzk0NDg2ODA2LCJleHAiOjE3OTQ1MzAwMDZ9.RruMukPrxPtoRWBSmuVo_obGVTTaX4dT7xYHFtul6Qs"
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhZG1pbklkIjoiNjgxYjVlYTU0MjJhMDc0OTc0MGQ1YWFkIiwiaWF0IjoxNzk0NDYwNjMwLCJleHAiOjE3OTQ1MDM4MzB9.2yorohkgThZB8doByqXL-upE0umIstOi0bi9frCEVrQ"
-        },
+         },
         {
           "name": "user",
           "value": "{\"_id\":\"6ab389146ca3d7e712fae24b\",\"admin_code\":\"MCF-AD-1001\",\"branch_id\":\"6ab3876c6ca3d7e712fae248\",\"name\":\"Admin\",\"admin_name\":\"Hari\",\"phoneNumber\":\"9876543210\",\"password\":\"123456\",\"email\":\"test.admin@example.com\",\"modify\":\"true\",\"admin_access_right_id\":{\"access_permissions\":{\"view_dashboard\":\"true\",\"view_analytics\":\"true\",\"add_group\":\"true\",\"view_group\":\"true\",\"edit_group\":\"true\",\"delete_group\":\"true\",\"add_customer\":\"true\",\"view_customer\":\"true\",\"edit_customer\":\"true\",\"delete_customer\":\"true\",\"add_enrollment\":\"true\",\"delete_enrollment\":\"true\",\"view_enrollment\":\"true\",\"edit_enrollment\":\"true\",\"add_employee\":\"true\",\"view_employee\":\"true\",\"edit_employee\":\"true\",\"delete_employee\":\"true\",\"modify_payment_date\":\"true\",\"add_lead\":\"true\",\"view_lead\":\"true\",\"edit_lead\":\"true\",\"delete_lead\":\"true\",\"add_loan\":\"true\",\"view_loan\":\"true\",\"edit_loan\":\"true\",\"delete_loan\":\"true\",\"add_pigme\":\"true\",\"view_pigme\":\"true\",\"edit_pigme\":\"true\",\"delete_pigme\":\"true\",\"add_auction\":\"true\",\"view_auction\":\"true\",\"edit_auction\":\"true\",\"delete_auction\":\"true\",\"add_payment\":\"true\",\"view_payment\":\"true\",\"edit_payment\":\"true\",\"edit_limited_payment\":\"true\",\"delete_payment\":\"true\",\"view_reports\":\"true\",\"view_daybook\":\"true\",\"view_group_report\":\"true\",\"view_all_customer_report\":\"true\",\"view_customer_report\":\"true\",\"view_receipt_report\":\"true\",\"view_auction_report\":\"true\",\"view_lead_report\":\"true\",\"view_pigme_report\":\"true\",\"view_loan_report\":\"true\",\"view_agent_report\":\"true\",\"view_target\":\"true\",\"view_mobile_options\":\"true\",\"bid_request\":\"true\",\"view_suspense_payments\":\"true\",\"unlink_enrollment\":\"true\"},\"_id\":\"6ab3b6459f835aa9ae9fa8d1\",\"title\":\"Super Administrator\",\"role\":\"Super Administrator\",\"branch_id\":\"6ab3876c6ca3d7e712fae248\"}}"
