@@ -15,7 +15,7 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
 
   const agents = [
     {
-      name: 'Jack Aravind',
+      name: 'jack aravind',
       email: 'jack.aravind@example.com',
       phone: '9000000001',
       pincode: '560001',
@@ -25,7 +25,7 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
       designation: 'Full Stack Developer'
     },
     {
-      name: 'Jack Naveen',
+      name: 'jack naveen',
       email: 'jack.naveen@example.com',
       phone: '9000000002',
       pincode: '560002',
@@ -35,7 +35,7 @@ test('Add Three Agents and Verify Each Agent', async ({ page }) => {
       designation: 'Full Stack Developer'
     },
     {
-      name: 'Jack Suresh',
+      name: 'jack suresh',
       email: 'jack.suresh@example.com',
       phone: '9000000003',
       pincode: '560003',
