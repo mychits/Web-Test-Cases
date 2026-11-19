@@ -1334,6 +1334,67 @@ npx playwright test tests/auth/BidRequestDelete.spec.js --project=chromium --hea
 
 ````
 
+
+````
+
+## Test Case for Enrollment Remove
+
+# 1. Enrollment Remove
+npx playwright test tests/enrollments/enrollment-remove.spec.js --project=chromium --headed --workers=1
+
+## Test Case for Sub Admin
+
+# 2. Sub Admin Add
+npx playwright test tests/auth/SubAdminAdd.spec.js --project=chromium --headed --workers=1
+
+# 3. Sub Admin Delete
+npx playwright test tests/auth/SubAdminDelete.spec.js --project=chromium --headed --workers=1
+
+## Test Case for Designation 
+
+# 4. Designation Add
+npx playwright test tests/auth/DesignationAdd.spec.js --project=chromium --headed --workers=1
+
+# 5. Designation Delete
+npx playwright test tests/auth/DesignationDelete.spec.js --project=chromium --headed --workers=1
+
+## Test Case for Customer approve and unapprove 
+
+# 6. Customer Approve
+npx playwright test tests/customers/customer-approve.spec.js --project=chromium --headed --workers=1
+
+# 7. Customer Unapprove
+npx playwright test tests/customers/customer-unapprove.spec.js --project=chromium --headed --workers=1
+
+# 8. View Playwright Report
+npx playwright show-report
+
+## Playwrite Testcase for Loan Penalty Add 
+
+npx playwright test "tests/auth/LoanPenaltyAdd.spec.js" --project=chromium --headed --workers=1
+
+## Playwrite Testcase for Loan Penalty View
+
+npx playwright test "tests/auth/LoanViewPenalty.spec.js" --project=chromium --headed --workers=1
+
+## Playwrite Testcase for Loan Penalty Delete
+
+npx playwright test "tests/auth/LoanPenaltyDelete.spec.js" --project=chromium --headed --workers=1
+
+````
+
+````
+
+## Playwrite Testcase for Employee UnVerify 
+
+npx playwright test "tests/auth/EmployeeUnverify.spec.js" --project=chromium --headed --workers=1  
+
+## Playwrite Testcase for Agent UnVerify 
+
+npx playwright test "tests/auth/AgentUnverify.spec.js" --project=chromium --headed --workers=1
+
+````
+
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
 
 ### Push Automation Changes
