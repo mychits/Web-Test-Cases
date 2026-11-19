@@ -177,7 +177,6 @@ test('Add 100 Agents and Verify Each Agent', async ({ page }) => {
 
       successCount++;
 
-      // Return to the first table page
       await page.goto(agentURL, {
         waitUntil: 'domcontentloaded'
       });
@@ -185,7 +184,7 @@ test('Add 100 Agents and Verify Each Agent', async ({ page }) => {
       continue;
     }
 
-    // Return to the first page before opening the form
+    // Return to first page before opening the form
     await page.goto(agentURL, {
       waitUntil: 'domcontentloaded'
     });
@@ -233,7 +232,6 @@ test('Add 100 Agents and Verify Each Agent', async ({ page }) => {
 
     console.log(`Form closed for: ${agent.name}`);
 
-    // Wait for server to process the save
     await page.waitForTimeout(2500);
 
     // Reload to fetch fresh table data
