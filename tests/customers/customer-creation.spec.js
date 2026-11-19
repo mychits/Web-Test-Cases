@@ -1322,9 +1322,6 @@ async function additionalDetails(page, c) {
 // SAVE CUSTOMER
 // =====================================
 
-async function saveCustomer(page, c) {
-  console.log(`[Save] ${c.name}`);
-
 function csvEscape(value) {
   const text = String(value ?? '');
 
@@ -1507,6 +1504,12 @@ test(
       ),
       'Potential bugs or automation errors detected; see CSV report'
     ).toHaveLength(0);
+
+});
+
+async function saveCustomer(page, c) {
+  console.log(`[Save] ${c.name}`);
+
   const dialog = page.locator(
     '[role="dialog"]:visible, .ant-modal:visible'
   ).last();

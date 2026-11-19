@@ -1,14 +1,29 @@
 
 const leads = [
+  // this is a invalid lead test data but it passed and added to the table, so need to check with the backend team
+  // {
+  //   name: '123456',
+  //   phone: '9100663011',
+  //   profession: 'Employed',
+  //   source: 'Social Media',
+  //   needs: 'Savings'
+  // },
+  // {
+  //   name: '234567',
+  //   phone: '9100003022',
+  //   profession: 'Self Employed',
+  //   source: 'Social Media',
+  //   needs: 'Borrowings'
+  // },
   {
-    name: 'Ind Arjun',
+    name: 'Ind Aravind',
     phone: '9100663001',
     profession: 'Employed',
     source: 'Social Media',
     needs: 'Savings'
   },
   {
-    name: 'Ind Karthik',
+    name: 'Ind Bhargav',
     phone: '9100003002',
     profession: 'Self Employed',
     source: 'Social Media',
