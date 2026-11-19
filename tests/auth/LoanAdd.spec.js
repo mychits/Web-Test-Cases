@@ -1,6 +1,7 @@
 
 const { test, expect } = require('@playwright/test');
 const path = require('path');
+require('dotenv').config();
 
 test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
@@ -9,8 +10,7 @@ test.use({
 test('Add Loan for Blr-gayle', async ({ page }) => {
   test.setTimeout(120000);
 
-  const baseURL =
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/';
+  const baseURL = process.env.BASE_URL;
 
   // STEP 1: Open website using saved login session
   await page.goto(baseURL, {
@@ -167,7 +167,7 @@ test('Add Loan for Blr-gayle', async ({ page }) => {
 
   // STEP 13: Verify Daily Payment Amount
   const dailyPaymentLabel = page.locator('label').filter({
-    hasText: /^Daily Payment Amount\s*\*?$/i
+    hasText: /^Daily Payment Amount\s*\*?$/
   }).last();
 
   const dailyPaymentInput = dailyPaymentLabel
@@ -181,7 +181,7 @@ test('Add Loan for Blr-gayle', async ({ page }) => {
 
   // STEP 14: Verify Disbursement Amount
   const disbursementLabel = page.locator('label').filter({
-    hasText: /^Disbursement Amount\s*\*?$/i
+    hasText: /^Disbursement Amount\s*\*?$/
   }).last();
 
   const disbursementInput = disbursementLabel

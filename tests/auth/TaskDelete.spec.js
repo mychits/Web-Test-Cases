@@ -1,4 +1,6 @@
 
+require('dotenv').config();
+
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
@@ -10,16 +12,18 @@ test('Delete Two Created Tasks', async ({ page }) => {
 
   test.setTimeout(90000);
 
+  const baseURL = process.env.BASE_URL.replace(/\/+$/, '');
+
   // Open website
-  await page.goto('http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/');
+  await page.goto(baseURL);
   await page.waitForTimeout(2000);
 
   // Open Dashboard
-  await page.goto('http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/dashboard');
+  await page.goto(`${baseURL}/dashboard`);
   await page.waitForTimeout(2000);
 
   // Open Task page
-  await page.goto('http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/task');
+  await page.goto(`${baseURL}/task`);
   await page.waitForTimeout(3000);
 
   console.log('Task page opened');
@@ -65,7 +69,7 @@ test('Delete Two Created Tasks', async ({ page }) => {
     await page.waitForTimeout(2000);
 
     console.log(`Deleted task assigned to: ${assignedPerson}`);
-    
+
     // Clear search before next task
     await searchBox.fill('');
     await page.waitForTimeout(1500);

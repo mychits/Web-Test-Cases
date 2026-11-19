@@ -1,4 +1,6 @@
 
+require('dotenv').config();
+
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
@@ -10,13 +12,15 @@ test.setTimeout(60000);
 
 test('Add Two New Tasks', async ({ page }) => {
 
-  await page.goto('http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/');
+  const baseURL = process.env.BASE_URL.replace(/\/+$/, '');
+
+  await page.goto(baseURL);
   await page.waitForTimeout(2000);
 
-  await page.goto('http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/dashboard');
+  await page.goto(`${baseURL}/dashboard`);
   await page.waitForTimeout(2000);
 
-  await page.goto('http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com/task');
+  await page.goto(`${baseURL}/task`);
   await page.waitForTimeout(2000);
 
   const selectOption = async (dialog, index, optionNumber) => {

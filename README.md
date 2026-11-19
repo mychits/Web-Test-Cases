@@ -1286,88 +1286,100 @@ git status
 git add .
 ```
 
-Only stage all files after checking that no secrets or unintended generated files will be committed.
+### Commit Automation Changes
+
+# Loan Add
+npx playwright test tests/auth/LoanAdd.spec.js --project=chromium --headed --workers=1
+
+# Guarantor Add
+npx playwright test tests/auth/GuarantorAdd.spec.js --project=chromium --headed --workers=1
+
+# Guarantor Delete
+npx playwright test tests/auth/GuarantorDelete.spec.js --project=chromium --headed --workers=1  
+
+### 13/11/2026 – Playwright Automation Commands
+
+**1. Linked Guarantor Add**
+```bash
+npx playwright test tests/auth/LinkedGuarantorAdd.spec.js --project=chromium --headed --workers=1
+```
+
+**2. Co-Applicant Add**
+```bash
+npx playwright test tests/auth/Co-ApplicantAdd.spec.js --project=chromium --headed --workers=1
+```
+
+**3. Co-Applicant Delete**
+```bash
+npx playwright test tests/auth/Co-ApplicantDelete.spec.js --project=chromium --headed --workers=1
+```
+
+**4. Group Category Add**
+```bash
+npx playwright test tests/auth/GroupCategoryAdd.spec.js --project=chromium --headed --workers=1
+```
+ ## Automation Testing Commands For Bid Management
+
+# 1. Bid Request Add
+npx playwright test tests/auth/BidRequestAdd.spec.js --project=chromium --headed --workers=1
+
+# 2. Bid Request Accept
+npx playwright test tests/auth/BidRequestAccept.spec.js --project=chromium --headed --workers=1
+
+# 3. Bid Request Prized
+npx playwright test tests/auth/BidRequestPrized.spec.js --project=chromium --headed --workers=1
+
+# 4. Bid Request Delete
+npx playwright test tests/auth/BidRequestDelete.spec.js --project=chromium --headed --workers=1
+
+````
+
+The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
+
+### Push Automation Changes
+
+```bash
+git push
+```
 
 ---
 
-# Automation Safety Guidelines
+## Automation Safety Guidelines
 
 1. Run automation only in an authorized environment.
-2. Use dedicated test accounts and test data.
+2. Use dedicated test data.
 3. Keep credentials outside source code.
-4. Never commit OTPs or passwords.
-5. Verify the exact record before deletion.
+4. Avoid hardcoded OTPs and passwords.
+5. Validate the target record before deletion or status updates.
 6. Use dry-run flags where supported.
-7. Stop when multiple records match.
-8. Verify results after submission.
+7. Stop if multiple records match the search criteria.
+8. Check the results after submission.
 9. Avoid unnecessary fixed delays.
 10. Prefer stable Playwright locators.
-11. Use explicit assertions.
-12. Keep dependent tests in the correct order.
-13. Do not classify automation failures as confirmed application bugs.
-14. Verify application behavior before reporting validation bugs.
-15. Avoid creating duplicate records during repeated execution.
+11. Keep tests independent where possible.
+12. Do not run dependent status transitions out of order.
 
 ---
 
-# Troubleshooting
+## Troubleshooting
 
-## 1. No Tests Found
+### 1. No Tests Found
+
+**Error:**
 
 ```text
 Error: No tests found.
 ```
 
-Check the file path and Playwright configuration:
+**Solution:**
 
-```cmd
+```bash
 npx playwright test --list
 ```
 
-## 2. Customer Dataset Not Found
+Use the correct test file path and check `playwright.config.js`.
 
-```text
-Cannot find module '../../test-data/customer-data-100'
-```
-
-Ensure the dataset exists at:
-
-```text
-Web-Test-Cases/test-data/customer-data-100.js
-```
-
-Verify the dataset:
-
-```cmd
-node -e "const c=require('./test-data/customer-data-100.js'); console.log('Total Customers:',c.length)"
-```
-
-Expected output for a 100-record dataset:
-
-```text
-Total Customers: 100
-```
-
-## 3. Customer Validation Shows PASS Unexpectedly
-
-Check whether the application actually rejected the tested field.
-
-A passing Playwright test alone does not prove that the expected validation occurred.
-
-Verify the field-specific error or the form transition before reporting the result.
-
-## 4. Duplicate Customer Error
-
-Possible causes:
-
-- Customer was created during a previous run.
-- Phone number or email already exists.
-- The previous save succeeded but was not verified.
-- Dataset values were reused.
-
-Use fresh test data or verified duplicate detection before attempting creation again.
-
-## 5. Terminal Shows a Blank Screen
+### 2. Terminal Shows a Blank Screen
 
 In VS Code:
 
