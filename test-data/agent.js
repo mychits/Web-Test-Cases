@@ -1,6 +1,17 @@
 
 const agents = [
-  {
+  // this is invalid test data but its passed and added to the table, so we need to check for this case
+//  {
+//     name: '123456',
+//     email: 'blr.aravind@example.com',
+//     phone: '9101000051',
+//     pincode: '560011',
+//     aadhaar: '700000000001',
+//     pan: 'BLAAA1001A',
+//     address: '11 Ashoka Street, Bengaluru',
+//     designation: 'Collection Agents'
+//   }, 
+ {
     name: 'BLR Aravind',
     email: 'blr.aravind@example.com',
     phone: '9101000001',

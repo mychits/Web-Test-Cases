@@ -1,5 +1,25 @@
 
 const employees = [
+  // this is a invalid employee test data but it passed and added to the table, so need to check with the backend team
+  // {
+  //   name: '123456',
+  //   email: 'jack.arjun.test01@example.com',
+  //   phone: '9000001031',
+  //   password: 'Test@Jack101',
+  //   pincode: '560001',
+  //   aadhaar: '500000000001',
+  //   pan: 'ABCDE1001A',
+  //   address: 'Address 101, Bengaluru',
+  //   designation: 'Full Stack Developer',
+  //   status: 'Active',
+  //   joiningDate: '2026-01-01',
+  //   dob: '1995-01-10',
+  //   gender: 'Male',
+  //   salary: '25000',
+  //   alternatePhone: '9000002001',
+  //   totalLeaves: '12',
+  //   emergencyContact: '1234567890'
+  // },
   {
     name: 'Jack Arjun',
     email: 'jack.arjun.test01@example.com',
@@ -18,7 +38,7 @@ const employees = [
     alternatePhone: '9000002001',
     totalLeaves: '12',
     emergencyContact: 'Arjun Kumar'
-  },
+   },
   {
     name: 'Jack Manoj',
     email: 'jack.manoj.test02@example.com',
