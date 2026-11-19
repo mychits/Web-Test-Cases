@@ -1,4 +1,6 @@
 
+require('dotenv').config();
+
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 
@@ -10,10 +12,7 @@ test('Un Approve Customers - Dev.praveen and Dev.vignesh', async ({ page }) => {
 
   test.setTimeout(300000);
 
-  const baseURL = (
-    process.env.BASE_URL ||
-    'http://purple-development-mychits-admin.s3-website.eu-north-1.amazonaws.com'
-  ).replace(/\/+$/, '');
+  const baseURL = process.env.BASE_URL.replace(/\/+$/, '');
 
   // Step 1: Open Dashboard
   await page.goto(`${baseURL}/dashboard`, {
