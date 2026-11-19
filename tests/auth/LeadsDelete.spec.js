@@ -13,10 +13,10 @@ test('Delete My Created Leads', async ({ page }) => {
   const baseURL = process.env.BASE_URL;
 
   const leads = [
-    { name: 'Jack Rahul', phone: '9576501036' },
-    { name: 'Jack Karthik', phone: '9676501083' },
-    { name: 'Jack Vikram', phone: '9976501054' },
-    { name: 'Jack Praveen', phone: '9076501090' }
+    { name: 'Jack Rahul', phone: '9576501031' },
+    { name: 'Jack Karthik', phone: '9676501089' },
+    { name: 'Jack Vikram', phone: '9976501055' },
+    { name: 'Jack Praveen', phone: '9076501099' }
   ];
 
   // STEP 1: Open Leads page with saved login.

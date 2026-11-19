@@ -3,119 +3,126 @@ const { test, expect } = require('@playwright/test');
 const path = require('path');
 require('dotenv').config();
 
+const employees = require('../../test-data/employee');
+
 test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
 });
 
-test('Delete Three Employees and Verify Each Deletion', async ({ page }) => {
-  test.setTimeout(240000);
+test('Delete All 100 Employees and Verify Each Deletion', async ({ page }) => {
 
-  const baseURL = process.env.BASE_URL;
+  test.setTimeout(1200000); // 20 minutes
 
-  const dashboardURL = `${baseURL}dashboard`;
-
-  const employeeURL =
-    `${baseURL}staff-menu/employee-menu/employee`;
-
-  const employees = [
-    'Jack Kiran',
-    'Jack Praveen',
-    'Jack Rohan'
-  ];
+  const baseURL = process.env.BASE_URL.replace(/\/+$/, '');
+  const employeeURL = `${baseURL}/staff-menu/employee-menu/employee`;
 
   let deletedCount = 0;
-  let alreadyDeletedCount = 0;
+  const failedEmployees = [];
 
-  // STEP 1: Open Dashboard
-  await page.goto(dashboardURL, {
+  // Step 1: Open Dashboard
+  await page.goto(`${baseURL}/dashboard`, {
     waitUntil: 'domcontentloaded',
     timeout: 45000
   });
 
-  console.log('Dashboard opened:', page.url());
+  await page.waitForTimeout(3000);
 
-  // STEP 2: Open Employee Page
+  const dashboardContent = await page.locator('body').innerText();
+
+  if (/Admin Login/i.test(dashboardContent)) {
+    throw new Error('Login session expired. Please update auth-state.json.');
+  }
+
+  console.log('Dashboard opened:', `${baseURL}/dashboard`);
+
+  // Step 2: Open Employee page
   await page.goto(employeeURL, {
     waitUntil: 'domcontentloaded',
     timeout: 45000
   });
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(3000);
 
-  console.log('Employee page opened:', page.url());
+  console.log('Employee page opened:', employeeURL);
+  console.log(`Total employees to delete: ${employees.length}`);
 
-  // STEP 3: Find Employee Across All Table Pages
+  // Step 3: Find employee across table pages
   async function findEmployeeAcrossPages(employeeName) {
-    const rows = page.locator('table tbody tr');
+
+    const searchInput = page.getByPlaceholder('Search...', {
+      exact: true
+    }).first();
+
+    await expect(searchInput).toBeVisible({
+      timeout: 15000
+    });
+
+    await searchInput.fill(employeeName);
+
+    await page.waitForTimeout(1000);
 
     for (let pageNumber = 1; pageNumber <= 30; pageNumber++) {
-      await page.waitForTimeout(500);
 
-      const matchingRow = rows.filter({
-        hasText: employeeName
-      });
+      const employeeRow = page.locator('table tbody tr')
+        .filter({ hasText: employeeName })
+        .first();
 
-      const rowCount = await matchingRow.count();
-
-      if (rowCount > 0) {
-        console.log(
-          `Employee found: ${employeeName} on table page ${pageNumber}`
-        );
-
-        return matchingRow.first();
+      if (await employeeRow.isVisible().catch(() => false)) {
+        console.log(`Employee found: ${employeeName} on table page ${pageNumber}`);
+        return employeeRow;
       }
 
-      const nextPage = page.locator('.ant-pagination-next').last();
+      console.log(`Employee not found on table page ${pageNumber}`);
 
-      if (await nextPage.count() === 0) {
+      const nextButton = page.locator(
+        '.ant-pagination-next'
+      ).last();
+
+      if (await nextButton.count() === 0) {
         break;
       }
 
-      const disabled =
-        await nextPage.getAttribute('aria-disabled') === 'true';
+      const isDisabled = await nextButton.evaluate(element =>
+        element.classList.contains('ant-pagination-disabled') ||
+        element.getAttribute('aria-disabled') === 'true'
+      ).catch(() => true);
 
-      const className =
-        await nextPage.getAttribute('class') || '';
-
-      if (
-        disabled ||
-        className.includes('ant-pagination-disabled')
-      ) {
+      if (isDisabled) {
         break;
       }
 
-      await nextPage.click();
+      await nextButton.click();
 
       await page.waitForTimeout(1000);
     }
 
-    // Print actual table rows to diagnose missing employee
-    const actualRows = await rows.allTextContents();
-
-    console.log('Current table rows:', actualRows);
-
     console.log(
-      `Employee not found across table pages: ${employeeName}`
+      'Employee table rows:',
+      await page.locator('table tbody tr').allInnerTexts()
     );
 
     return null;
   }
 
-  // STEP 4: Open Action Menu
-  async function openActionMenu(row, employeeName) {
-    const actionCell = row.locator('td').last();
+  // Step 4: Open three-dot menu and click Delete
+  async function openActionMenu(employeeRow, employeeName) {
 
-    const threeDots = actionCell.locator('svg').last();
+    const actionCell = employeeRow.locator('td').last();
 
-    await expect(threeDots).toBeVisible({
-      timeout: 10000
-    });
+    const actionButtons = actionCell.locator(
+      'button, [role="button"]'
+    );
 
-    await threeDots.click();
+    if (await actionButtons.count() > 0) {
+      await actionButtons.last().click();
+    } else {
+      await actionCell.locator('svg').last().click();
+    }
+
+    await page.waitForTimeout(1000);
 
     console.log(`Action menu opened: ${employeeName}`);
 
-    // Select Delete
     const deleteOption = page.getByText('Delete', {
       exact: true
     }).last();
@@ -124,122 +131,198 @@ test('Delete Three Employees and Verify Each Deletion', async ({ page }) => {
       timeout: 10000
     });
 
-    await deleteOption.click();
+    console.log(`Delete option found: ${employeeName}`);
+
+    await deleteOption.click({
+      force: true,
+      timeout: 10000
+    });
 
     console.log(`Delete option clicked: ${employeeName}`);
   }
 
-  // STEP 5: Confirm Employee Deletion
+  // Step 5: Enter exact employee name and confirm deletion
   async function confirmDelete(employeeName) {
-    const confirmation = page.locator(
+
+    const confirmationDialog = page.locator(
       '.ant-modal:visible, [role="dialog"]:visible'
     ).last();
 
-    await expect(confirmation).toBeVisible({
+    await expect(confirmationDialog).toBeVisible({
       timeout: 15000
     });
 
-    console.log(`Delete confirmation opened: ${employeeName}`);
+    console.log(`Confirmation dialog opened: ${employeeName}`);
 
-    const nameInput = confirmation.locator('input').last();
+    const confirmationInput = confirmationDialog.locator('input').last();
 
-    await expect(nameInput).toBeVisible({
+    await expect(confirmationInput).toBeVisible({
       timeout: 10000
     });
 
-    await nameInput.fill(employeeName);
+    await confirmationInput.fill(employeeName);
 
-    console.log(`Employee name entered: ${employeeName}`);
+    console.log(`Exact employee name entered: ${employeeName}`);
 
-    const finalDeleteButton = confirmation.getByRole('button', {
-      name: /again delete|delete/i
+    await expect(confirmationInput).toHaveValue(employeeName);
+
+    const finalDeleteButton = confirmationDialog.getByRole('button', {
+      name: 'Delete',
+      exact: true
     }).last();
 
     await expect(finalDeleteButton).toBeVisible({
       timeout: 10000
     });
 
-    await expect(finalDeleteButton).toBeEnabled({
+    await expect(finalDeleteButton).toBeEnabled();
+
+    await finalDeleteButton.click({
+      force: true,
       timeout: 10000
     });
 
-    await finalDeleteButton.click();
-
     console.log(`Final Delete clicked: ${employeeName}`);
 
-    await page.waitForTimeout(2000);
+    await expect(confirmationDialog).toBeHidden({
+      timeout: 15000
+    });
+
+    console.log(`Confirmation dialog closed: ${employeeName}`);
   }
 
-  // STEP 6: Verify Employee Is Deleted
+  // Step 6: Verify employee deletion
   async function verifyEmployeeDeleted(employeeName) {
-    await page.goto(employeeURL, {
-      waitUntil: 'domcontentloaded'
+
+    const searchInput = page.getByPlaceholder('Search...', {
+      exact: true
+    }).first();
+
+    await expect(searchInput).toBeVisible({
+      timeout: 10000
     });
 
-    await page.waitForTimeout(1500);
+    await searchInput.fill(employeeName);
 
-    const remainingRow = await findEmployeeAcrossPages(employeeName);
+    const remainingRow = page.locator('table tbody tr')
+      .filter({ hasText: employeeName });
 
-    if (remainingRow) {
-      throw new Error(
-        `Employee "${employeeName}" is still present after deletion.`
-      );
+    try {
+
+      await expect(remainingRow).toHaveCount(0, {
+        timeout: 8000
+      });
+
+      console.log(`Verified employee deleted: ${employeeName}`);
+
+      return true;
+
+    } catch (error) {
+
+      console.log(`Employee still appears. Reloading page: ${employeeName}`);
     }
 
-    console.log(`SUCCESS: ${employeeName} is absent from the table.`);
-  }
-
-  // STEP 7: Process Employees
-  for (const employeeName of employees) {
-    console.log('--------------------------------');
-    console.log(`Processing employee: ${employeeName}`);
-
-    await page.goto(employeeURL, {
-      waitUntil: 'domcontentloaded'
+    await page.reload({
+      waitUntil: 'domcontentloaded',
+      timeout: 45000
     });
 
-    await page.waitForTimeout(1500);
+    const refreshedSearchInput = page.getByPlaceholder('Search...', {
+      exact: true
+    }).first();
 
-    const employeeRow =
-      await findEmployeeAcrossPages(employeeName);
+    await expect(refreshedSearchInput).toBeVisible({
+      timeout: 15000
+    });
 
-    if (!employeeRow) {
+    await refreshedSearchInput.fill(employeeName);
+
+    const refreshedRow = page.locator('table tbody tr')
+      .filter({ hasText: employeeName });
+
+    try {
+
+      await expect(refreshedRow).toHaveCount(0, {
+        timeout: 10000
+      });
+
+      console.log(`Verified employee deleted after reload: ${employeeName}`);
+
+      return true;
+
+    } catch (error) {
+
+      console.log(`Employee still exists after reload: ${employeeName}`);
+
       console.log(
-        `NOT FOUND: ${employeeName}. No deletion attempted.`
+        'Remaining matching rows:',
+        await refreshedRow.allInnerTexts()
       );
 
-      alreadyDeletedCount++;
-
-      continue;
+      return false;
     }
-
-    // Click three dots and Delete
-    await openActionMenu(employeeRow, employeeName);
-
-    // Enter employee name and confirm
-    await confirmDelete(employeeName);
-
-    // Verify deletion
-    await verifyEmployeeDeleted(employeeName);
-
-    deletedCount++;
-
-    console.log(`Deleted successfully: ${employeeName}`);
-
-    console.log(
-      `Deleted in this run: ${deletedCount}`
-    );
   }
 
-  // STEP 8: Final Result
+  // Step 7: Delete all employees
+  for (let i = 0; i < employees.length; i++) {
+
+    const employeeName = employees[i].name;
+
+    console.log('--------------------------------');
+    console.log(`Processing employee ${i + 1}/${employees.length}: ${employeeName}`);
+
+    try {
+
+      const employeeRow = await findEmployeeAcrossPages(employeeName);
+
+      if (!employeeRow) {
+        throw new Error(`Employee not found: ${employeeName}`);
+      }
+
+      await openActionMenu(employeeRow, employeeName);
+
+      await confirmDelete(employeeName);
+
+      const isDeleted = await verifyEmployeeDeleted(employeeName);
+
+      if (!isDeleted) {
+        throw new Error(`Employee deletion could not be verified: ${employeeName}`);
+      }
+
+      deletedCount++;
+
+      console.log(`Successfully deleted and verified: ${employeeName}`);
+
+    } catch (error) {
+
+      console.log(`Failed to delete ${employeeName}: ${error.message}`);
+
+      failedEmployees.push(employeeName);
+    }
+  }
+
+  // Step 8: Final summary
+  console.log('--------------------------------');
+  console.log('EMPLOYEE DELETE SUMMARY');
   console.log('--------------------------------');
 
-  console.log(`Deleted in this run: ${deletedCount}`);
-  console.log(`Not found before deletion: ${alreadyDeletedCount}`);
+  console.log(`Total employees: ${employees.length}`);
+  console.log(`Successfully deleted: ${deletedCount}`);
+  console.log(`Failed employees: ${failedEmployees.length}`);
 
-  console.log(
-    `FINAL RESULT: ${deletedCount + alreadyDeletedCount}/${employees.length} employees absent from the table.`
-  );
+  if (failedEmployees.length > 0) {
+    console.log('Failed employee names:', failedEmployees);
+  }
 
-  expect(deletedCount + alreadyDeletedCount).toBe(employees.length);
+  console.log('--------------------------------');
+
+  expect(
+    failedEmployees,
+    'Some employees could not be deleted.'
+  ).toHaveLength(0);
+
+  console.log('All employees deleted successfully');
+  console.log('All deletion verifications completed');
+  console.log('Test case completed successfully');
+
 });
