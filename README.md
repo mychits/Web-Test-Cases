@@ -1,25 +1,30 @@
-
 # Web Test Cases – Playwright Automation
 
 ## Project Overview
 
-This project contains automated web application test cases developed using **Playwright and JavaScript**.
+This project contains automated web application test cases developed using **Playwright and JavaScript** for the **MyChits Admin Web Application**.
 
-The automation is designed to test the functionality of the **MyChits Admin Web Application**.
+The project is designed to automate functional testing, validate form inputs, verify record creation and deletion, test status transitions, and identify potential application defects.
 
 ### Modules Covered
 
 - Admin Login
+- Branch Management
 - Leads Creation and Deletion
 - Agent Creation and Deletion
 - Employee Creation and Deletion
-- Customer Creation and Deletion
+- Customer Creation, Deletion, and Field Validation
 - Group Creation and Deletion
 - Enrollment Creation and Deletion
 - Auction Creation and Deletion
-- Loan Creation
-- Loan Status Update: Requested to Pending
-- Loan Status Update: Pending to Reject
+- Loan Creation and Status Updates
+- Guarantor Creation and Deletion
+- Linked Guarantor Creation
+- Co-Applicant Creation and Deletion
+- Group Category Creation
+- Bid Request Management
+- Visitor Management
+- Pigmy Management
 - Website-Wide Field Validation
 
 ### Objectives
@@ -27,11 +32,14 @@ The automation is designed to test the functionality of the **MyChits Admin Web 
 - Automate repetitive manual testing activities.
 - Validate application functionality.
 - Verify creation and deletion workflows.
-- Test loan status transitions.
+- Test positive and negative scenarios.
+- Validate loan status transitions.
+- Support individual and bulk customer testing.
+- Identify potential application bugs.
 - Reduce manual testing effort.
-- Identify functional issues.
 - Improve test consistency.
 - Generate Playwright execution reports.
+- Produce structured terminal summaries.
 
 ---
 
@@ -57,13 +65,25 @@ Web-Test-Cases/
 │   │
 │   ├── auth/
 │   │   ├── LoginAutomation.spec.js
+│   │   ├── BranchAdd.spec.js
+│   │   ├── BranchDelete.spec.js
 │   │   ├── LeadsAdd.spec.js
 │   │   ├── LeadsDelete.spec.js
 │   │   ├── AgentAdd.spec.js
 │   │   ├── AgentDelete.spec.js
 │   │   ├── EmployeeAdd.spec.js
 │   │   ├── EmployeeDelete.spec.js
-│   │   └── LoanAdd.spec.js
+│   │   ├── LoanAdd.spec.js
+│   │   ├── GuarantorAdd.spec.js
+│   │   ├── GuarantorDelete.spec.js
+│   │   ├── LinkedGuarantorAdd.spec.js
+│   │   ├── Co-ApplicantAdd.spec.js
+│   │   ├── Co-ApplicantDelete.spec.js
+│   │   ├── GroupCategoryAdd.spec.js
+│   │   ├── BidRequestAdd.spec.js
+│   │   ├── BidRequestAccept.spec.js
+│   │   ├── BidRequestPrized.spec.js
+│   │   └── BidRequestDelete.spec.js
 │   │
 │   ├── customers/
 │   │   ├── customer-creation.spec.js
@@ -88,11 +108,20 @@ Web-Test-Cases/
 │   │   ├── loan-reject.spec.js
 │   │   └── loan-status-update.js
 │   │
+│   ├── visitors/
+│   │   └── <visitor-test-file>.spec.js
+│   │
+│   ├── pigmy/
+│   │   └── <pigmy-test-file>.spec.js
+│   │
 │   ├── customer-creation.spec.js
 │   └── login.spec.js
 │
 ├── test-data/
-│   └── customers.js
+│   ├── customers.js
+│   └── customer-data-100.js
+│
+├── customer-creation-results/
 │
 ├── .env
 ├── .gitignore
@@ -101,22 +130,19 @@ Web-Test-Cases/
 └── README.md
 ```
 
-**Note:** `loan-status-update.js` is a reusable helper file, not a standalone Playwright test.
+**Important:** BranchAdd, BranchDelete, Visitor, and Pigmy filenames are illustrative and must be replaced with the actual filenames in the repository. The structure above combines the original documented files with proposed additions.
+
+`loan-status-update.js` is a reusable helper, not a standalone Playwright test.
 
 ---
 
 ## Prerequisites
 
-Install the following software:
+Install Node.js, npm, Visual Studio Code, and Git.
 
-1. Node.js
-2. npm
-3. Visual Studio Code
-4. Git
+Check installed versions:
 
-Check the installed versions:
-
-```bash
+```cmd
 node -v
 npm -v
 git --version
@@ -128,7 +154,7 @@ git --version
 
 ### 1. Clone the Repository
 
-```bash
+```cmd
 git clone <your-repository-url>
 cd Web-Test-Cases
 ```
@@ -137,43 +163,39 @@ Replace `<your-repository-url>` with the actual GitHub repository URL.
 
 ### 2. Install Dependencies
 
-```bash
+```cmd
 npm install
 ```
 
 ### 3. Install Playwright Browsers
 
-```bash
+```cmd
 npx playwright install
 ```
 
-To install only Chromium:
+To install Chromium only:
 
-```bash
+```cmd
 npx playwright install chromium
 ```
 
 ### 4. Verify Playwright Installation
 
-```bash
+```cmd
 npx playwright --version
 ```
 
 ### 5. List Available Tests
 
-```bash
+```cmd
 npx playwright test --list
 ```
-
-This command displays all tests recognized by the Playwright configuration.
 
 ---
 
 ## Environment Configuration
 
 Create a `.env` file in the project root.
-
-The following is an example configuration. Use values appropriate for your test environment.
 
 ```dotenv
 # Application configuration
@@ -200,8 +222,8 @@ DELETE_ENROLLMENT_REASON=Others
 DELETE_ENROLLMENT_CONFIRM=NO
 
 # Loan configuration
-LOAN_CUSTOMER_NAME=Emp2 Chitxpert
-LOAN_CUSTOMER_PHONE=9898987897
+LOAN_CUSTOMER_NAME=your_test_customer
+LOAN_CUSTOMER_PHONE=your_test_phone
 LOAN_EXPECTED_AMOUNT=10000
 LOAN_TARGET_ID=
 
@@ -212,41 +234,43 @@ ENABLE_NEW_LOAN_SUBMIT=false
 ENABLE_LOAN_STATUS_UPDATE=false
 ```
 
-Additional environment variables may be required by the individual Group, Auction, Loan Creation, and other test scripts.
+Additional environment variables may be required by individual Group, Auction, Branch, Visitor, Pigmy, and other test scripts.
 
-### Important Security Instructions
+### Security Instructions
 
 - Never commit `.env` to GitHub.
 - Never share real passwords or OTPs.
 - Use dedicated test accounts.
 - Keep sensitive test data private.
-- Enable creation, deletion, or status changes only after verifying the intended target.
-- Run tests against the approved testing environment.
+- Enable deletion or status changes only after verifying the intended target.
+- Run tests against an approved testing environment.
 
 ---
 
 # Playwright Automation Run Commands
 
-All commands should be executed from the project root directory:
+Execute commands from the project root:
 
 ```text
 C:\Users\SYS 4\Documents\Web-Test-Cases
 ```
 
-The commands below use the full relative `tests/` path.
+The following commands are suitable for Windows Command Prompt.
+
+---
 
 ## 1. Admin Login Automation
 
 **Test file:** `tests/auth/LoginAutomation.spec.js`
 
-```bash
-npx playwright test "tests/auth/LoginAutomation.spec.js" --project=chromium --headed --workers=1
+```cmd
+npx playwright test tests/auth/LoginAutomation.spec.js --project=chromium --headed --workers=1
 ```
 
 ### Workflow
 
 1. Open MyChits Admin.
-2. Navigate to the Admin Login page.
+2. Navigate to Admin Login.
 3. Select the configured branch.
 4. Enter the Admin ID.
 5. Request OTP.
@@ -256,62 +280,129 @@ npx playwright test "tests/auth/LoginAutomation.spec.js" --project=chromium --he
 
 ---
 
-## 2. Leads Automation
+## 2. Branch Management Automation
+
+### Overview
+
+Branch Management automation validates branch creation, branch details, required fields, and branch management operations.
+
+### Test Scenarios
+
+- Branch creation with valid data.
+- Branch Name validation.
+- Required field validation.
+- Minimum and maximum field-length validation.
+- Duplicate branch validation.
+- Branch search and listing.
+- Branch information updates, where supported.
+- Branch activation and deactivation, where supported.
+- Branch deletion, where supported.
+- Error message validation.
+
+### Branch Creation Workflow
+
+1. Log in to MyChits Admin.
+2. Navigate to Branches Management.
+3. Click Create Branch.
+4. Enter the required branch details.
+5. Verify mandatory fields.
+6. Submit the form.
+7. Verify the success or error message.
+8. Confirm the created branch appears in the branch list.
+
+### Branch Validation Scenarios
+
+| Field | Test Data | Expected Result |
+|---|---|---|
+| Branch Name | `Main Branch` | Accept valid name |
+| Branch Name | `12345` | Reject if numeric-only names are prohibited |
+| Branch Name | Empty | Show required-field validation |
+| Branch Name | Special characters only | Reject if prohibited |
+| Branch Name | Excessively long text | Enforce configured maximum length |
+| Branch Name | Existing name | Apply duplicate-name rules |
+
+### Branch Creation
+
+**Example test file:** `tests/auth/BranchAdd.spec.js`
+
+```cmd
+npx playwright test tests/auth/BranchAdd.spec.js --project=chromium --headed --workers=1
+```
+
+### Branch Deletion
+
+**Example test file:** `tests/auth/BranchDelete.spec.js`
+
+```cmd
+npx playwright test tests/auth/BranchDelete.spec.js --project=chromium --headed --workers=1
+```
+
+**Note:** These are example filenames. Use the actual Branch test paths in your project.
+
+### Expected Results
+
+- Valid branch details should be accepted.
+- Invalid values should be rejected according to approved requirements.
+- Required fields should display validation messages.
+- Duplicate branches should be handled correctly.
+- Successfully created branches should appear in the branch list.
+
+**Safety:** Only create, update, or delete branches in an authorized testing environment.
+
+---
+
+## 3. Leads Automation
 
 ### Create Leads
 
-**Test file:** `tests/auth/LeadsAdd.spec.js`
-
-```bash
-npx playwright test "tests/auth/LeadsAdd.spec.js" --project=chromium --headed --workers=1
+```cmd
+npx playwright test tests/auth/LeadsAdd.spec.js --project=chromium --headed --workers=1
 ```
 
 ### Delete Leads
 
-**Test file:** `tests/auth/LeadsDelete.spec.js`
-
-```bash
-npx playwright test "tests/auth/LeadsDelete.spec.js" --project=chromium --headed --workers=1
+```cmd
+npx playwright test tests/auth/LeadsDelete.spec.js --project=chromium --headed --workers=1
 ```
 
 ### Purpose
 
-Validate the Leads Management creation and deletion workflows.
+Validate Leads Management creation and deletion workflows.
 
 ---
 
-## 3. Agent Automation
+## 4. Agent Automation
 
 ### Create Agents
 
-```bash
-npx playwright test "tests/auth/AgentAdd.spec.js" --project=chromium --headed --workers=1
+```cmd
+npx playwright test tests/auth/AgentAdd.spec.js --project=chromium --headed --workers=1
 ```
 
 ### Delete Agents
 
-```bash
-npx playwright test "tests/auth/AgentDelete.spec.js" --project=chromium --headed --workers=1
+```cmd
+npx playwright test tests/auth/AgentDelete.spec.js --project=chromium --headed --workers=1
 ```
 
 ### Purpose
 
-Validate Agent Management operations, including creation and deletion.
+Validate Agent Management creation and deletion functionality.
 
 ---
 
-## 4. Employee Automation
+## 5. Employee Automation
 
 ### Create Employees
 
-```bash
-npx playwright test "tests/auth/EmployeeAdd.spec.js" --project=chromium --headed --workers=1
+```cmd
+npx playwright test tests/auth/EmployeeAdd.spec.js --project=chromium --headed --workers=1
 ```
 
 ### Delete Employees
 
-```bash
-npx playwright test "tests/auth/EmployeeDelete.spec.js" --project=chromium --headed --workers=1
+```cmd
+npx playwright test tests/auth/EmployeeDelete.spec.js --project=chromium --headed --workers=1
 ```
 
 ### Purpose
@@ -320,48 +411,239 @@ Validate Employee Management creation and deletion functionality.
 
 ---
 
-## 5. Customer Automation
+## 6. Customer Automation
 
-### Customer Creation
+### Overview
 
-**Test file:** `tests/customers/customer-creation.spec.js`
+Customer Management automation validates customer creation, deletion, and field-level input validation.
 
-```bash
-npx playwright test "tests/customers/customer-creation.spec.js" --project=chromium --headed --workers=1 --reporter=line
-```
+The customer creation workflow is designed to support a dataset containing up to 100 customer records.
 
-### Workflow
+### Test Files
+
+| File | Purpose |
+|---|---|
+| `tests/customers/customer-creation.spec.js` | Customer creation and validation |
+| `tests/customers/customer-deletion.spec.js` | Customer deletion |
+| `test-data/customer-data-100.js` | Customer test data |
+
+### Customer Creation Workflow
 
 1. Log in to MyChits Admin.
 2. Open Customer Management.
 3. Click Add Customer.
-4. Enter customer information.
-5. Complete customer settings.
-6. Save the customer.
-7. Return to Customer Management.
-8. Continue with the remaining test customers.
-9. Verify the creation results.
+4. Enter Basic Details.
+5. Enter Address Details.
+6. Select Country, State, and District.
+7. Select Referred Type.
+8. Select Payment Frequency.
+9. Enter Installment Amount.
+10. Save and confirm the customer when appropriate.
+11. Verify the application result.
+12. Return to Customer Management.
+13. Continue with the remaining selected customers.
+
+### Customer Dataset
+
+**File:** `test-data/customer-data-100.js`
+
+Customer data fields include:
+
+- Test ID
+- Customer Name
+- First Name
+- Middle Name
+- Last Name
+- Email
+- Phone Number
+- Aadhaar Number
+- PAN Number
+- Pincode
+- Address
+- Communication Address
+- Permanent Address
+- Country
+- State
+- District
+- Family Code
+- Referred Type
+- Payment Frequency
+- Installment Amount
+
+### Run One Customer
+
+Example: Customer 1.
+
+```cmd
+set CUSTOMER_MODE=ONE
+set CUSTOMER_NUMBER=1
+npx playwright test tests/customers/customer-creation.spec.js --project=chromium --headed --workers=1 --retries=0
+```
+
+### Run Customer 50
+
+```cmd
+set CUSTOMER_MODE=ONE
+set CUSTOMER_NUMBER=50
+npx playwright test tests/customers/customer-creation.spec.js --project=chromium --headed --workers=1 --retries=0
+```
+
+### Run All 100 Customers
+
+```cmd
+set CUSTOMER_MODE=ALL
+npx playwright test tests/customers/customer-creation.spec.js --project=chromium --headed --workers=1 --retries=0
+```
+
+### Run a Customer Range
+
+Example: Customers 1 to 10.
+
+```cmd
+set CUSTOMER_MODE=RANGE
+set CUSTOMER_START=1
+set CUSTOMER_END=10
+npx playwright test tests/customers/customer-creation.spec.js --project=chromium --headed --workers=1 --retries=0
+```
+
+### Customer Field Validation
+
+The intended data-driven workflow allows QA engineers to change customer values in the dataset without creating a separate Playwright script for each invalid scenario.
+
+Example valid data:
+
+```javascript
+{
+  testId: "TC001",
+  name: "Arun Kumar",
+  firstName: "Arun",
+  lastName: "Kumar"
+}
+```
+
+Example invalid data:
+
+```javascript
+{
+  testId: "TC001",
+  name: "12345 Kumar",
+  firstName: "12345",
+  lastName: "Kumar"
+}
+```
+
+The remaining required fields must also be included in each record.
+
+### Validation Scenarios
+
+| Field | Invalid Test Value | Expected Result |
+|---|---|---|
+| First Name | `12345` | Reject numeric-only name |
+| Last Name | `67890` | Reject numeric-only name |
+| Email | `invalidemail` | Reject invalid email |
+| Phone Number | `123` | Reject invalid phone |
+| Pincode | `ABCDEF` | Reject invalid pincode |
+| Aadhaar | `12345` | Reject invalid format |
+| PAN | `123456` | Reject invalid format |
+| Installment Amount | `-100` | Reject negative amount if prohibited |
+
+The expected validation behavior must match the approved application requirements.
+
+### Automatic Data Validation Requirement
+
+The target workflow is:
+
+1. Update customer data in `customer-data-100.js`.
+2. Run the same Playwright command.
+3. Automatically identify fields that violate expected validation rules.
+4. Observe whether the application accepts or rejects the data.
+5. Assign the appropriate QA result.
+
+**Implementation status:** The previously shared script still uses `CUSTOMER_TEST_TYPE`, `INVALID_FIELD`, and `INVALID_VALUE` for explicit negative testing. Automatic validation using only changed dataset values requires the corresponding Playwright code changes and verification.
+
+### QA Status Classification
+
+| Status | Meaning |
+|---|---|
+| PASS | Application behaves according to requirements |
+| BUG | Application violates a confirmed requirement |
+| NEEDS_REVIEW | Result is unclear and requires investigation |
+| ERROR | Automation or application execution error |
+
+### Terminal Summary
+
+Expected summary format:
+
+```text
+========== FINAL SUMMARY ==========
+Total: 1
+Passed: 1
+Potential Bugs: 0
+Needs Review: 0
+Errors: 0
+```
+
+Example when a potential bug is detected:
+
+```text
+========== FINAL SUMMARY ==========
+Total: 1
+Passed: 0
+Potential Bugs: 1
+Needs Review: 0
+Errors: 0
+```
+
+These are illustrative results, not actual test executions.
+
+A correctly rejected invalid value should count as PASS.
+
+A potential bug should be reported only when the unexpected application behavior is verified.
+
+### Customer Bug Report
+
+Recommended report columns:
+
+| Column | Description |
+|---|---|
+| Module | Customer Management |
+| Page | Add Customer |
+| Field | Field under validation |
+| Test ID | Dataset identifier |
+| Test Value | Input entered |
+| Expected Result | Required application behavior |
+| Actual Result | Observed application behavior |
+| Status | PASS, BUG, NEEDS_REVIEW, or ERROR |
+
+### Customer Test Results
+
+The automation can generate reports in:
+
+```text
+customer-creation-results/
+├── customer-test-results.json
+├── customer-bug-report.csv
+└── failure-screenshots/
+```
+
+Actual output files depend on the implemented script.
 
 ### Customer Deletion
 
-**Test file:** `tests/customers/customer-deletion.spec.js`
-
-```bash
-npx playwright test "tests/customers/customer-deletion.spec.js" --project=chromium --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/customers/customer-deletion.spec.js --project=chromium --headed --workers=1 --reporter=line
 ```
 
-**Safety:** Only delete customers created for automation testing.
+**Safety:** Delete only customers created for automation testing.
 
 ---
 
-## 6. Group Automation
+## 7. Group Automation
 
 ### Group Creation
 
-**Test file:** `tests/groups/group-creation.spec.js`
-
-```bash
-npx playwright test "tests/groups/group-creation.spec.js" --project=chromium --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/groups/group-creation.spec.js --project=chromium --headed --workers=1 --reporter=line
 ```
 
 ### Workflow
@@ -373,53 +655,48 @@ npx playwright test "tests/groups/group-creation.spec.js" --project=chromium --h
 5. Configure group settings.
 6. Configure auction-related settings where required.
 7. Submit the form.
-8. Check the group creation result.
+8. Verify the result.
 
 ### Group Deletion
 
-**Test file:** `tests/groups/group-deletion.spec.js`
-
-```bash
-npx playwright test "tests/groups/group-deletion.spec.js" --project=chromium --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/groups/group-deletion.spec.js --project=chromium --headed --workers=1 --reporter=line
 ```
 
 ### Workflow
 
 1. Open Group Management.
-2. Locate the target test group.
+2. Locate the target group.
 3. Open the Actions menu.
 4. Select the deletion operation.
-5. Complete the confirmation flow.
-6. Verify the deletion result.
+5. Complete confirmation.
+6. Verify deletion.
 
-**Safety:** Delete only groups created for automation testing.
+**Safety:** Delete only automation-created test groups.
 
 ---
 
-## 7. Enrollment Automation
+## 8. Enrollment Automation
 
 ### Enrollment Creation
 
-**Test file:** `tests/enrollments/enrollment-creation.spec.js`
-
-```bash
-npx playwright test "tests/enrollments/enrollment-creation.spec.js" --project=chromium --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/enrollments/enrollment-creation.spec.js --project=chromium --headed --workers=1 --reporter=line
 ```
 
 ### Workflow
 
-1. Log in to MyChits Admin.
-2. Navigate to Enrollments.
-3. Click Add Enrollment.
-4. Select the Group.
-5. Select the Customer.
-6. Select Payment Type.
-7. Enter Chit Asking Month.
-8. Select Referred Type.
-9. Select the required Ticket.
-10. Click Verify.
-11. Click Submit when submission is enabled.
-12. Check the enrollment creation result.
+1. Log in.
+2. Open Enrollments.
+3. Select Add Enrollment.
+4. Select Group and Customer.
+5. Select Payment Type.
+6. Enter Chit Asking Month.
+7. Select Referred Type.
+8. Select the required Ticket.
+9. Click Verify.
+10. Submit when enabled.
+11. Verify the result.
 
 **Important:** Select the ticket before clicking Verify.
 
@@ -429,31 +706,13 @@ npx playwright test "tests/enrollments/enrollment-creation.spec.js" --project=ch
 ENABLE_ENROLLMENT_SUBMIT=false
 ```
 
-When set to `false`, the automation should not perform the final submission.
-
-Enable actual submission only when appropriate:
-
-```dotenv
-ENABLE_ENROLLMENT_SUBMIT=true
-```
+Set to `true` only when actual submission is intended and authorized.
 
 ### Enrollment Deletion
 
-**Test file:** `tests/enrollments/enrollment-deletion.spec.js`
-
-```bash
-npx playwright test "tests/enrollments/enrollment-deletion.spec.js" --project=chromium --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/enrollments/enrollment-deletion.spec.js --project=chromium --headed --workers=1 --reporter=line
 ```
-
-### Workflow
-
-1. Open Enrollments.
-2. Locate the exact automation-created enrollment.
-3. Open the three-dot Actions menu.
-4. Select Remove.
-5. Choose the removal reason.
-6. Confirm removal when enabled.
-7. Verify the deletion result.
 
 ### Deletion Configuration
 
@@ -465,90 +724,71 @@ DELETE_ENROLLMENT_CONFIRM=NO
 
 `NO` disables final deletion.
 
-After verifying the target enrollment:
+After verifying the exact target:
 
 ```dotenv
 DELETE_ENROLLMENT_CONFIRM=YES
 ```
 
-Only use `YES` for the intended automation-created enrollment.
-
 ---
 
-## 8. Auction Automation
-
-The Auction module contains separate test files for auction creation and deletion.
+## 9. Auction Automation
 
 ### Auction Creation
 
-**Test file:** `tests/auctions/auction-creation.spec.js`
-
-```bash
-npx playwright test "tests/auctions/auction-creation.spec.js" --project=chromium --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/auctions/auction-creation.spec.js --project=chromium --headed --workers=1 --reporter=line
 ```
-
-### Purpose
-
-Test the Auction Management creation workflow and validate the result.
 
 ### Auction Deletion
 
-**Test file:** `tests/auctions/auction-deletion.spec.js`
-
-```bash
-npx playwright test "tests/auctions/auction-deletion.spec.js" --project=chromium --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/auctions/auction-deletion.spec.js --project=chromium --headed --workers=1 --reporter=line
 ```
 
 ### Purpose
 
-Test the deletion workflow for a specifically identified automation-created auction.
+Validate Auction Management creation and deletion workflows.
 
-### Auction Safety
+### Safety
 
-- Verify the auction before submitting changes.
+- Verify auction details before submission.
 - Use approved test data.
 - Do not delete unrelated auctions.
-- Check any confirmation settings implemented by the test scripts.
-- Review the test-specific environment variables before execution.
+- Review test-specific confirmation settings.
 
 ---
 
-## 9. Loan Automation
-
-The Loan module supports loan creation and loan status updates.
+## 10. Loan Automation
 
 ### Loan Test Files
 
 | File | Purpose |
-|------|---------|
-| `loan-creation.spec.js` | Loan creation workflow |
-| `another-loan-creation.spec.js` | Create another Requested loan |
+|---|---|
+| `loan-creation.spec.js` | Loan creation |
+| `another-loan-creation.spec.js` | Another Requested loan |
 | `loan-pending.spec.js` | Requested to Pending |
 | `loan-reject.spec.js` | Pending to Reject |
-| `loan-status-update.js` | Reusable loan status helper |
+| `loan-status-update.js` | Reusable helper |
 
-### 9.1 Loan Creation
+### Loan Creation
 
-**Test file:** `tests/loans/loan-creation.spec.js`
-
-```bash
-npx playwright test "tests/loans/loan-creation.spec.js" --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/loans/loan-creation.spec.js --headed --workers=1 --reporter=line
 ```
 
-### 9.2 Another Requested Loan Creation
+### Another Requested Loan
 
-**Test file:** `tests/loans/another-loan-creation.spec.js`
-
-```bash
-npx playwright test "tests/loans/another-loan-creation.spec.js" --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/loans/another-loan-creation.spec.js --headed --workers=1 --reporter=line
 ```
 
 ### Example Loan Test Data
 
 | Field | Example |
-|-------|---------|
+|---|---|
 | Customer | Emp2 Chitxpert |
-| Phone Number | 9898987897 |
+| Phone | 9898987897 |
 | Loan Amount | 10000 |
 | Tenure | 100 |
 | Service Charges | 100 |
@@ -558,68 +798,51 @@ npx playwright test "tests/loans/another-loan-creation.spec.js" --headed --worke
 
 ### Loan Creation Workflow
 
-1. Log in to MyChits Admin.
-2. Open the Loans page.
+1. Log in.
+2. Open Loans.
 3. Open Add Loan.
-4. Select the borrower.
-5. Enter loan amount.
-6. Enter tenure.
-7. Enter service charges.
-8. Enter documentation charges.
-9. Enter daily payment.
-10. Select Requested status.
-11. Submit the loan when enabled.
-12. Check the result in the Requests tab.
+4. Select borrower.
+5. Enter loan amount and tenure.
+6. Enter service charges.
+7. Enter documentation charges.
+8. Enter daily payment.
+9. Select Requested status.
+10. Submit when enabled.
+11. Verify the result in Requests.
 
-### Loan Submission Configuration
+### Submission Control
 
 ```dotenv
 ENABLE_NEW_LOAN_SUBMIT=false
 ```
 
-Use `false` for a non-submitting run.
-
-To permit actual submission:
-
-```dotenv
-ENABLE_NEW_LOAN_SUBMIT=true
-```
-
-Only enable this after reviewing the borrower and loan details.
+Set to `true` only after verifying the intended borrower and loan details.
 
 ---
 
-## 10. Loan Status Update: Requested to Pending
+## 11. Loan Status Update: Requested to Pending
 
-**Test file:** `tests/loans/loan-pending.spec.js`
-
-### Run Command
-
-```bash
-npx playwright test "tests/loans/loan-pending.spec.js" --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/loans/loan-pending.spec.js --headed --workers=1 --reporter=line
 ```
 
 ### Workflow
 
-1. Log in to MyChits Admin.
-2. Navigate to the Loans page.
-3. Open the Requests tab.
-4. Search for the configured customer phone number.
-5. Locate the matching loan.
-6. Verify the target loan details.
-7. Open the three-dot Actions menu.
-8. Select Update Status.
-9. Locate the Pending option.
-10. Click Pending only when updates are enabled.
-11. Verify the loan in the Pending tab.
+1. Open Loans.
+2. Select Requests.
+3. Search for the configured phone number.
+4. Locate the matching loan.
+5. Verify loan details.
+6. Open Actions.
+7. Select Update Status.
+8. Select Pending when enabled.
+9. Verify the loan in Pending.
 
 ### Dry Run
 
 ```dotenv
 ENABLE_LOAN_STATUS_UPDATE=false
 ```
-
-The automation locates the loan and status option without changing the loan status.
 
 ### Actual Update
 
@@ -627,35 +850,27 @@ The automation locates the loan and status option without changing the loan stat
 ENABLE_LOAN_STATUS_UPDATE=true
 ```
 
-This permits the script to click Pending.
-
-**Important:** Verify that the loan is currently Requested before running this test.
+Only enable the update after verifying the loan.
 
 ---
 
-## 11. Loan Status Update: Pending to Reject
+## 12. Loan Status Update: Pending to Reject
 
-**Test file:** `tests/loans/loan-reject.spec.js`
-
-### Run Command
-
-```bash
-npx playwright test "tests/loans/loan-reject.spec.js" --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/loans/loan-reject.spec.js --headed --workers=1 --reporter=line
 ```
 
 ### Workflow
 
-1. Log in to MyChits Admin.
-2. Navigate to the Loans page.
-3. Open the Pending tab.
-4. Search using the configured phone number.
-5. Identify the matching loan row.
-6. Verify the loan amount when configured.
-7. Open the Actions menu.
-8. Select Update Status.
-9. Locate the Reject option.
-10. Click Reject only when updates are enabled.
-11. Verify the loan in the Rejected tab.
+1. Open Loans.
+2. Select Pending.
+3. Search using the configured phone number.
+4. Identify the matching loan.
+5. Verify the loan amount and other identifiers.
+6. Open Actions.
+7. Select Update Status.
+8. Select Reject when enabled.
+9. Verify the loan in Rejected.
 
 ### Dry Run
 
@@ -663,81 +878,221 @@ npx playwright test "tests/loans/loan-reject.spec.js" --headed --workers=1 --rep
 ENABLE_LOAN_STATUS_UPDATE=false
 ```
 
-Expected successful dry-run messages:
-
-```text
-Preparing Pending -> Reject
-Pending tab selected
-Loans table found: table 0
-Matching loans found: 1
-Update Status menu opened
-[DRY RUN] Would change Pending -> Reject
-No status has been changed
-1 passed
-```
-
-These are expected messages, not a guarantee that the current test will pass.
-
 ### Actual Rejection
 
 ```dotenv
 ENABLE_LOAN_STATUS_UPDATE=true
 ```
 
-This permits the Reject status selection.
-
-**Warning:** Rejecting a loan changes application data. Run only after verifying the correct loan and obtaining authorization.
-
 ### Loan Identification
 
-The shared loan helper supports:
+The documented helper supports:
 
 - Customer name validation when displayed.
 - Phone number matching.
 - Optional loan amount verification.
-- Optional loan ID verification when visible.
+- Optional loan ID verification.
 - Protection against multiple matching rows.
 
-The Pending table may show a blank Borrower Name field. In that case, the script can use the phone number and other configured checks.
-
-If multiple loans match, the automation should stop rather than selecting an arbitrary loan.
-
-### Loan Status Update Configuration
-
-```dotenv
-LOAN_CUSTOMER_NAME=Emp2 Chitxpert
-LOAN_CUSTOMER_PHONE=9898987897
-LOAN_EXPECTED_AMOUNT=10000
-LOAN_TARGET_ID=
-ENABLE_LOAN_STATUS_UPDATE=false
-```
+The Pending table may show a blank Borrower Name. Use the configured phone number and other identifiers to verify the correct loan.
 
 ### Reusable Helper
 
 **File:** `tests/loans/loan-status-update.js`
 
-Functions:
+Documented functions:
 
 - `validateConfig()`
 - `login(page)`
 - `openLoans(page)`
 - `changeStatus(page, source, target)`
 
-This helper is imported by the Pending and Reject test files.
-
-Do not run `loan-status-update.js` directly as a Playwright test.
+Do not run this helper directly as a Playwright test.
 
 ---
 
-## 12. Website-Wide Field Validation
+## 13. Website-Wide Field Validation
 
 **Test file:** `tests/login.spec.js`
 
-```bash
-npx playwright test "tests/login.spec.js" --headed --workers=1 --reporter=line
+```cmd
+npx playwright test tests/login.spec.js --headed --workers=1 --reporter=line
 ```
 
 This test is intended for login and website-wide field-length auditing.
+
+---
+
+## 14. Guarantor Automation
+
+### Guarantor Add
+
+```cmd
+npx playwright test tests/auth/GuarantorAdd.spec.js --project=chromium --headed --workers=1
+```
+
+### Guarantor Delete
+
+```cmd
+npx playwright test tests/auth/GuarantorDelete.spec.js --project=chromium --headed --workers=1
+```
+
+### Purpose
+
+Validate guarantor creation and deletion workflows.
+
+---
+
+## 15. Linked Guarantor Automation
+
+### Linked Guarantor Add
+
+```cmd
+npx playwright test tests/auth/LinkedGuarantorAdd.spec.js --project=chromium --headed --workers=1
+```
+
+### Purpose
+
+Validate linked guarantor creation and association workflows.
+
+---
+
+## 16. Co-Applicant Automation
+
+### Co-Applicant Add
+
+```cmd
+npx playwright test tests/auth/Co-ApplicantAdd.spec.js --project=chromium --headed --workers=1
+```
+
+### Co-Applicant Delete
+
+```cmd
+npx playwright test tests/auth/Co-ApplicantDelete.spec.js --project=chromium --headed --workers=1
+```
+
+### Purpose
+
+Validate Co-Applicant Management creation and deletion workflows.
+
+---
+
+## 17. Group Category Automation
+
+### Group Category Add
+
+```cmd
+npx playwright test tests/auth/GroupCategoryAdd.spec.js --project=chromium --headed --workers=1
+```
+
+### Purpose
+
+Validate Group Category creation.
+
+---
+
+## 18. Bid Management Automation
+
+### Bid Request Add
+
+```cmd
+npx playwright test tests/auth/BidRequestAdd.spec.js --project=chromium --headed --workers=1
+```
+
+### Bid Request Accept
+
+```cmd
+npx playwright test tests/auth/BidRequestAccept.spec.js --project=chromium --headed --workers=1
+```
+
+### Bid Request Prized
+
+```cmd
+npx playwright test tests/auth/BidRequestPrized.spec.js --project=chromium --headed --workers=1
+```
+
+### Bid Request Delete
+
+```cmd
+npx playwright test tests/auth/BidRequestDelete.spec.js --project=chromium --headed --workers=1
+```
+
+### Purpose
+
+Validate Bid Request Management creation, acceptance, prized processing, and deletion.
+
+---
+
+## 19. Visitor Management Automation
+
+### Overview
+
+Visitor Management automation is intended to validate visitor registration and management workflows in the MyChits Admin Web Application.
+
+### Test Scenarios
+
+- Visitor creation.
+- Visitor details validation.
+- Required field validation.
+- Visitor search and listing.
+- Visitor information updates, where supported.
+- Visitor deletion, where supported.
+- Error message validation.
+
+### Test Execution
+
+Run the Visitor Management test using its actual file path:
+
+```cmd
+npx playwright test "tests/visitors/<visitor-test-file>.spec.js" --project=chromium --headed --workers=1
+```
+
+Replace `<visitor-test-file>` with the actual Visitor test filename.
+
+### Expected Results
+
+- Valid visitor details should be accepted.
+- Invalid visitor details should be rejected according to approved application requirements.
+- Successfully created visitors should appear in the visitor list.
+- Search, update, and deletion operations should work where supported.
+- Unexpected application behavior should be reported for review.
+
+---
+
+## 20. Pigmy Management Automation
+
+### Overview
+
+Pigmy Management automation is intended to validate recurring small-value deposit collection and related management workflows in the MyChits Admin Web Application.
+
+### Test Scenarios
+
+- Pigmy account or record creation.
+- Customer selection and validation.
+- Deposit amount validation.
+- Collection entry validation.
+- Payment frequency validation, where applicable.
+- Pigmy transaction listing and search.
+- Required field validation.
+- Error message validation.
+
+### Test Execution
+
+Run the Pigmy Management test using its actual file path:
+
+```cmd
+npx playwright test "tests/pigmy/<pigmy-test-file>.spec.js" --project=chromium --headed --workers=1
+```
+
+Replace `<pigmy-test-file>` with the actual Pigmy test filename.
+
+### Expected Results
+
+- Valid Pigmy details should be accepted.
+- Invalid deposit amounts should be rejected according to approved application requirements.
+- Customer selection should work correctly.
+- Successful transactions should appear in the appropriate list.
+- Validation and submission errors should be clearly reported.
 
 ---
 
@@ -745,131 +1100,125 @@ This test is intended for login and website-wide field-length auditing.
 
 ## Run All Tests
 
-```bash
+```cmd
 npx playwright test --project=chromium --headed --workers=1
 ```
 
-**Warning:** Running all tests can trigger creation, deletion, and status update workflows. Review all environment flags, test data, and dependencies first.
+**Warning:** Running all tests can trigger creation, deletion, and status update workflows. Review environment flags and test data first.
 
-## Run Tests Without Opening the Browser
+## Run Without Opening the Browser
 
-```bash
+```cmd
 npx playwright test --project=chromium --workers=1
 ```
 
 ## Run in UI Mode
 
-```bash
+```cmd
 npx playwright test --ui
 ```
 
 ## Run in Debug Mode
 
-```bash
+```cmd
 npx playwright test --debug
 ```
 
-## List All Tests
+## List Available Tests
 
-```bash
+```cmd
 npx playwright test --list
 ```
 
 ## Run a Specific Test
 
-```bash
-npx playwright test "tests/loans/loan-reject.spec.js" --headed --workers=1 --reporter=line
-```
-
-### Important Path Note
-
-If Playwright reports:
-
-```text
-Error: No tests found.
-```
-
-Check the actual file path and the Playwright configuration.
-
-In this project, the full relative path can be used:
-
-```text
-tests/loans/loan-reject.spec.js
+```cmd
+npx playwright test tests/loans/loan-reject.spec.js --headed --workers=1 --reporter=line
 ```
 
 ---
 
-## Validate JavaScript Syntax
+# Validate JavaScript Syntax
+
+### Customer Tests
+
+```cmd
+node --check tests/customers/customer-creation.spec.js
+node --check tests/customers/customer-deletion.spec.js
+node --check test-data/customer-data-100.js
+```
 
 ### Group Tests
 
-```bash
-node --check "tests/groups/group-creation.spec.js"
-node --check "tests/groups/group-deletion.spec.js"
+```cmd
+node --check tests/groups/group-creation.spec.js
+node --check tests/groups/group-deletion.spec.js
 ```
 
 ### Enrollment Tests
 
-```bash
-node --check "tests/enrollments/enrollment-creation.spec.js"
-node --check "tests/enrollments/enrollment-deletion.spec.js"
+```cmd
+node --check tests/enrollments/enrollment-creation.spec.js
+node --check tests/enrollments/enrollment-deletion.spec.js
 ```
 
 ### Auction Tests
 
-```bash
-node --check "tests/auctions/auction-creation.spec.js"
-node --check "tests/auctions/auction-deletion.spec.js"
+```cmd
+node --check tests/auctions/auction-creation.spec.js
+node --check tests/auctions/auction-deletion.spec.js
 ```
 
 ### Loan Tests
 
-```bash
-node --check "tests/loans/loan-creation.spec.js"
-node --check "tests/loans/another-loan-creation.spec.js"
-node --check "tests/loans/loan-pending.spec.js"
-node --check "tests/loans/loan-reject.spec.js"
-node --check "tests/loans/loan-status-update.js"
+```cmd
+node --check tests/loans/loan-creation.spec.js
+node --check tests/loans/another-loan-creation.spec.js
+node --check tests/loans/loan-pending.spec.js
+node --check tests/loans/loan-reject.spec.js
+node --check tests/loans/loan-status-update.js
 ```
+
+### Branch, Visitor, and Pigmy Tests
+
+Run `node --check` with the actual test filenames after confirming their paths.
 
 ---
 
-## Playwright Test Reports
+# Playwright Test Reports
 
-To open the Playwright HTML report:
+Open the HTML report:
 
-```bash
+```cmd
 npx playwright show-report
 ```
 
-Playwright reports can contain:
+Playwright reports can include:
 
-- Passed tests
-- Failed tests
+- Passed and failed tests
 - Error messages
 - Screenshots
-- Traces when configured
+- Traces
 - Execution details
 
-### Test Results Directory
+### Standard Output Directories
 
 ```text
 test-results/
+playwright-report/
 ```
 
-### HTML Report Directory
+### Customer-Specific Reports
 
 ```text
-playwright-report/
+customer-creation-results/
 ```
 
 ---
 
-## Git Ignore Configuration
+# Git Ignore Configuration
 
-The `.gitignore` file should exclude sensitive and generated files.
-
-Example:
+Recommended `.gitignore` entries:
 
 ```gitignore
 node_modules/
@@ -881,6 +1230,7 @@ node_modules/
 test-results/
 playwright-report/
 blob-report/
+customer-creation-results/
 
 *.png
 *.jpg
@@ -888,54 +1238,51 @@ blob-report/
 *.webp
 *.webm
 *.trace
+*.log
 
 auth-state.json
 playwright/.auth/
-
-*.log
 ```
 
-**Note:** These image ignore patterns also exclude screenshots or images that you might intentionally want to track. Adjust them if necessary.
+Adjust image patterns if the repository intentionally tracks image assets.
 
 ---
 
-## Git and GitHub Commands
+# Git and GitHub Commands
 
-### Check Repository Status
+## Check Repository Status
 
-```bash
+```cmd
 git status
 ```
 
-### Stage README Changes
+## Stage README Changes
 
-```bash
+```cmd
 git add README.md
 ```
 
-### Commit README Changes
+## Commit README Changes
 
-```bash
-git commit -m "Update README with auction and loan automation"
+```cmd
+git commit -m "Update README with branch, visitor, pigmy and customer automation"
 ```
 
-### Push to GitHub
+## Push to GitHub
 
-```bash
+```cmd
 git push
 ```
 
-### Verify Git Status
+## Verify Status
 
-```bash
+```cmd
 git status
 ```
 
-### Stage All Project Changes
+## Stage All Reviewed Changes
 
-Use only when you have reviewed the files being committed:
-
-```bash
+```cmd
 git add .
 ```
 
@@ -987,43 +1334,6 @@ npx playwright test tests/auth/BidRequestDelete.spec.js --project=chromium --hea
 
 ````
 
-
-````
-
-## Test Case for Enrollment Remove
-
-# 1. Enrollment Remove
-npx playwright test tests/enrollments/enrollment-remove.spec.js --project=chromium --headed --workers=1
-
-## Test Case for Sub Admin
-
-# 2. Sub Admin Add
-npx playwright test tests/auth/SubAdminAdd.spec.js --project=chromium --headed --workers=1
-
-# 3. Sub Admin Delete
-npx playwright test tests/auth/SubAdminDelete.spec.js --project=chromium --headed --workers=1
-
-## Test Case for Designation 
-
-# 4. Designation Add
-npx playwright test tests/auth/DesignationAdd.spec.js --project=chromium --headed --workers=1
-
-# 5. Designation Delete
-npx playwright test tests/auth/DesignationDelete.spec.js --project=chromium --headed --workers=1
-
-## Test Case for Customer approve and unapprove 
-
-# 6. Customer Approve
-npx playwright test tests/customers/customer-approve.spec.js --project=chromium --headed --workers=1
-
-# 7. Customer Unapprove
-npx playwright test tests/customers/customer-unapprove.spec.js --project=chromium --headed --workers=1
-
-# 8. View Playwright Report
-npx playwright show-report
-
-````
-
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
 
 ### Push Automation Changes
@@ -1071,59 +1381,46 @@ Use the correct test file path and check `playwright.config.js`.
 
 ### 2. Terminal Shows a Blank Screen
 
-If the VS Code PowerShell terminal is blank:
+In VS Code:
 
-1. Close the blank terminal.
-2. Open the Command Palette.
-3. Select `Terminal: Select Default Profile`.
-4. Choose Command Prompt.
-5. Open a new terminal.
+1. Open the Command Palette.
+2. Select `Terminal: Select Default Profile`.
+3. Choose Command Prompt.
+4. Open a new terminal.
 
-Test with:
+Test:
 
 ```cmd
 echo Hello
 ```
 
-### 3. Loan Table Not Found
+## 6. Loan Table Not Found
 
 The Requests and Pending tables may use different column names.
 
-Supported name columns:
+Possible name columns:
 
 - Customer Name
 - Borrower Name
 
-Supported action columns:
+Possible action columns:
 
 - Action
 - Actions
 
-### 4. Matching Loans Found: 0
+## 7. Matching Loans Found: 0
 
-Possible causes:
+Check the phone number, loan status tab, search loading state, and whether the target loan exists.
 
-- Incorrect phone number.
-- Loan is in another status tab.
-- Search results have not loaded.
-- Customer name is blank in the table.
-- The target loan is not present.
+## 8. Multiple Matching Loans
 
-Verify the loan using the application interface before changing status.
+Stop the automation rather than choosing an arbitrary record. Use additional identifiers.
 
-### 5. Multiple Matching Loans
+## 9. Action Menu Not Found
 
-If multiple loans share the same phone number, the automation should stop.
+Inspect the Actions cell and verify the actual control used by the application.
 
-Use additional identification data to select the intended loan safely.
-
-### 6. Action Menu Not Found
-
-The application may use different controls in different status tabs.
-
-Inspect the Actions cell and update the selector based on the actual HTML.
-
-### 7. Status Update Not Performed
+## 10. Loan Status Not Updated
 
 Check:
 
@@ -1131,41 +1428,41 @@ Check:
 ENABLE_LOAN_STATUS_UPDATE=false
 ```
 
-When set to `false`, the script runs in dry-run mode.
-
-Do not change it to `true` until the correct loan and transition have been verified.
+When set to `false`, the workflow is a dry run.
 
 ---
 
-## Automation Best Practices
+# Automation Best Practices
 
-- Use reusable helper functions.
-- Maintain consistent naming conventions.
+- Maintain reusable helper functions.
 - Keep test data separate from test logic.
-- Use environment variables for configuration.
+- Use consistent file naming.
 - Prefer explicit assertions.
+- Reuse login sessions where appropriate.
 - Avoid unnecessary browser reloads.
-- Use a single login session per workflow when practical.
-- Run dependent tests in the correct order.
-- Maintain clear console logs.
 - Capture failure screenshots.
-- Review test reports regularly.
-- Commit only reviewed source code.
+- Maintain clear terminal logs.
+- Generate reports for validation results.
+- Confirm business rules before raising bugs.
+- Use unique test identifiers.
+- Review code before merging into the main branch.
 
 ---
 
-## Future Improvements
+# Future Improvements
 
+- Complete automatic positive and negative customer validation using dataset values.
+- Verify field-specific validation messages.
+- Improve customer creation persistence verification.
 - Implement Page Object Model classes.
-- Improve reusable test fixtures.
-- Add negative test cases.
+- Improve reusable fixtures.
+- Add more negative test cases.
 - Improve test data isolation.
-- Add unique identifiers for test records.
-- Improve automated cleanup.
-- Add CI/CD integration.
-- Generate test execution summaries.
-- Improve loan status verification.
-- Add more functional validation scenarios.
+- Add automated cleanup.
+- Integrate CI/CD pipelines.
+- Improve execution performance.
+- Expand Branch, Visitor, and Pigmy automation coverage.
+- Generate structured bug reports across modules.
 
 ---
 
