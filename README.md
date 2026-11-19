@@ -1022,6 +1022,30 @@ npx playwright test tests/customers/customer-unapprove.spec.js --project=chromiu
 # 8. View Playwright Report
 npx playwright show-report
 
+## Playwrite Testcase for Loan Penalty Add 
+
+npx playwright test "tests/auth/LoanPenaltyAdd.spec.js" --project=chromium --headed --workers=1
+
+## Playwrite Testcase for Loan Penalty View
+
+npx playwright test "tests/auth/LoanViewPenalty.spec.js" --project=chromium --headed --workers=1
+
+## Playwrite Testcase for Loan Penalty Delete
+
+npx playwright test "tests/auth/LoanPenaltyDelete.spec.js" --project=chromium --headed --workers=1
+
+````
+
+````
+
+## Playwrite Testcase for Employee UnVerify 
+
+npx playwright test "tests/auth/EmployeeUnverify.spec.js" --project=chromium --headed --workers=1  
+
+## Playwrite Testcase for Agent UnVerify 
+
+npx playwright test "tests/auth/AgentUnverify.spec.js" --project=chromium --headed --workers=1
+
 ````
 
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.

@@ -7,143 +7,216 @@ test.use({
   storageState: path.resolve(__dirname, '../../auth-state.json')
 });
 
-test('Delete My Created Leads', async ({ page }) => {
-  test.setTimeout(120000);
+test('Delete All 100 Automated Leads in Reverse Order and Verify', async ({ page }) => {
 
-  const baseURL = process.env.BASE_URL;
+  test.setTimeout(3600000);
 
-  const leads = [
-    { name: 'Jack Rahul', phone: '9576501031' },
-    { name: 'Jack Karthik', phone: '9676501089' },
-    { name: 'Jack Vikram', phone: '9976501055' },
-    { name: 'Jack Praveen', phone: '9076501099' }
-  ];
+  const baseURL = process.env.BASE_URL.replace(/\/+$/, '');
+  const leads = require('../../test-data/lead');
 
-  // STEP 1: Open Leads page with saved login.
-  await page.goto(`${baseURL}lead`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 45000
+  const completedLeads = [];
+  const failedLeads = [];
+
+  // Automatically accept browser confirmation dialogs
+  page.on('dialog', async dialog => {
+    console.log('Confirmation:', dialog.message());
+    await dialog.accept();
   });
 
-  console.log('Website opened:', page.url());
+  // Find a lead using its phone number across all table pages
+  async function findLeadByPhone(phone) {
 
-  const loginVisible = await page
-    .getByText('Admin Login', { exact: true })
-    .isVisible()
-    .catch(() => false);
+    for (let pageNumber = 1; pageNumber <= 30; pageNumber++) {
 
-  if (loginVisible) {
-    throw new Error(
-      'Login session expired. Run LoginAutomation.spec.js first.'
-    );
-  }
+      const rows = page.locator('tr');
+      const leadRow = rows.filter({ hasText: phone }).first();
 
-  console.log('Leads page opened successfully.');
+      if (
+        await leadRow.count() > 0 &&
+        await leadRow.isVisible().catch(() => false)
+      ) {
+        return leadRow;
+      }
 
-  // STEP 2: Process each selected lead.
-  for (const lead of leads) {
-    console.log(`Searching for: ${lead.name}`);
+      const nextButton = page.locator('.ant-pagination-next').last();
 
-    const phoneNumber = page.getByText(lead.phone, {
-      exact: true
-    }).first();
+      if (
+        await nextButton.count() === 0 ||
+        await nextButton.isDisabled().catch(() => true)
+      ) {
+        break;
+      }
 
-    await expect(phoneNumber).toBeVisible({
-      timeout: 15000
-    });
-
-    const row = phoneNumber.locator('xpath=ancestor::tr[1]');
-
-    await expect(row).toBeVisible();
-
-    // STEP 3: Locate the ACTION column.
-    const actionCell = row.locator('td').last();
-
-    await expect(actionCell).toBeVisible();
-
-    await actionCell.scrollIntoViewIfNeeded();
-
-    // IMPORTANT: Click the actual three-dot SVG icon.
-    const svgIcon = actionCell.locator('svg').last();
-
-    if (await svgIcon.count() > 0) {
-      await svgIcon.click();
-    } else {
-      throw new Error(
-        `Three-dot SVG icon not found for ${lead.name}.`
-      );
+      await nextButton.click();
+      await page.waitForTimeout(800);
     }
 
-    console.log(`Three-dot icon clicked for: ${lead.name}`);
+    return null;
+  }
 
-    // STEP 4: Wait for the dropdown menu to open.
-    const dropdown = page.locator(
-      '.ant-dropdown:visible, .ant-dropdown-menu:visible, [role="menu"]:visible'
-    ).last();
+  // Open leads page
+  await page.goto(`${baseURL}/lead`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000
+  });
 
-    await expect(dropdown).toBeVisible({
-      timeout: 10000
-    });
+  await page.waitForTimeout(2000);
 
-    console.log(
-      'Dropdown menu:',
-      await dropdown.innerText()
-    );
+  // Check login session
+  if (
+    await page.getByText('Admin Login', { exact: true })
+      .isVisible()
+      .catch(() => false)
+  ) {
+    throw new Error('Login session expired. Generate a fresh auth-state.json.');
+  }
 
-    // STEP 5: Select the exact Remove option.
-    const removeOption = dropdown
-      .locator('.ant-dropdown-menu-item, [role="menuitem"]')
-      .filter({
-        hasText: /^Remove$/
-      })
-      .last();
+  console.log('Starting lead deletion in reverse order...');
 
-    await expect(removeOption).toBeVisible({
-      timeout: 10000
-    });
+  // Delete from 100 to 1
+  for (let i = leads.length - 1; i >= 0; i--) {
 
-    // Handle native browser confirmation.
-    page.once('dialog', async dialog => {
-      console.log('Browser confirmation:', dialog.message());
-      await dialog.accept();
-    });
+    const lead = leads[i];
+    const leadName = lead.name;
+    const leadPhone = String(lead.phone);
 
-    await removeOption.click();
+    console.log(`\nProcessing ${i + 1}/${leads.length}: ${leadName}`);
 
-    console.log(`Remove clicked for: ${lead.name}`);
+    try {
 
-    // STEP 6: Handle website confirmation dialog if present.
-    const confirmation = page.locator(
-      '.ant-modal:visible, [role="dialog"]:visible'
-    ).last();
+      // Open the leads page for each lead
+      await page.goto(`${baseURL}/lead`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 60000
+      });
 
-    if (await confirmation.isVisible().catch(() => false)) {
-      const confirmButton = confirmation.getByRole('button', {
-        name: /remove|yes|confirm|ok/i
+      await page.waitForTimeout(1000);
+
+      // Search for the lead using its phone number
+      let leadRow = await findLeadByPhone(leadPhone);
+
+      // If the lead is already missing, count it as completed
+      if (!leadRow) {
+        console.log(`Lead already deleted or not present: ${leadName}`);
+        completedLeads.push(leadName);
+        continue;
+      }
+
+      console.log(`Lead found: ${leadName}`);
+
+      // Open the three-dot action menu
+      const actionCell = leadRow.locator('td').last();
+      const actionIcon = actionCell.locator('svg').last();
+
+      await actionIcon.click({ timeout: 15000 });
+      await page.waitForTimeout(500);
+
+      // Click Remove
+      const removeOption = page.getByText('Remove', {
+        exact: true
       }).last();
 
-      await expect(confirmButton).toBeVisible({
+      await removeOption.waitFor({
+        state: 'visible',
         timeout: 10000
       });
 
-      await confirmButton.click();
+      await removeOption.click();
 
-      console.log(`Removal confirmed for: ${lead.name}`);
+      console.log(`Remove clicked: ${leadName}`);
+
+      // Handle an optional website confirmation modal
+      const confirmationDialog = page.locator(
+        '.ant-modal:visible, [role="dialog"]:visible'
+      ).last();
+
+      try {
+
+        await confirmationDialog.waitFor({
+          state: 'visible',
+          timeout: 3000
+        });
+
+        const confirmButton = confirmationDialog.getByRole('button', {
+          name: /remove|yes|confirm|ok/i
+        }).last();
+
+        await confirmButton.click({ timeout: 10000 });
+
+        console.log(`Deletion confirmed: ${leadName}`);
+
+        await confirmationDialog.waitFor({
+          state: 'hidden',
+          timeout: 15000
+        }).catch(() => {});
+
+      } catch (error) {
+        console.log(`No additional confirmation modal for: ${leadName}`);
+      }
+
+      // Wait for deletion to complete
+      await page.waitForTimeout(1500);
+
+      // Refresh the page before verification
+      await page.reload({
+        waitUntil: 'domcontentloaded',
+        timeout: 60000
+      });
+
+      await page.waitForTimeout(1500);
+
+      // Verify the lead is absent
+      const remainingLead = await findLeadByPhone(leadPhone);
+
+      if (remainingLead) {
+        throw new Error(`Lead still exists after deletion: ${leadName}`);
+      }
+
+      console.log(`Successfully deleted and verified: ${leadName}`);
+
+      completedLeads.push(leadName);
+
+    } catch (error) {
+
+      console.log(`FAILED: ${leadName} | ${error.message}`);
+
+      failedLeads.push({
+        name: leadName,
+        phone: leadPhone,
+        reason: error.message
+      });
+
     }
-
-    // STEP 7: Verify deletion.
-    await expect(
-      page.getByText(lead.phone, {
-        exact: true
-      })
-    ).toHaveCount(0, {
-      timeout: 15000
-    });
-
-    console.log(`Lead deleted successfully: ${lead.name}`);
-
-    await page.waitForTimeout(1500);
   }
 
-  console.log('All four leads processed successfully.');
+  // Final report
+  console.log('\n======================================');
+  console.log('         LEAD DELETION REPORT');
+  console.log('======================================');
+
+  console.log(`Total leads: ${leads.length}`);
+  console.log(`Successfully completed: ${completedLeads.length}`);
+  console.log(`Failed leads: ${failedLeads.length}`);
+
+  if (failedLeads.length > 0) {
+
+    console.log('\nFAILED LEADS:');
+
+    failedLeads.forEach((lead, index) => {
+      console.log(
+        `${index + 1}. ${lead.name} | ${lead.phone} | ${lead.reason}`
+      );
+    });
+
+  }
+
+  console.log('======================================');
+
+  // Pass only when all leads are confirmed absent
+  expect(failedLeads, 'Some leads could not be verified as deleted')
+    .toHaveLength(0);
+
+  expect(completedLeads.length)
+    .toBe(leads.length);
+
 });
