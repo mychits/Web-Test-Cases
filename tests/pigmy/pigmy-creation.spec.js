@@ -391,6 +391,7 @@ async function fillField(
 // =====================================
 // SELECT DURATION
 // =====================================
+
 async function selectDuration(page, form, value) {
   console.log(`Selecting Duration: ${value}`);
 
