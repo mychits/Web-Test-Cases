@@ -1,12 +1,9 @@
-
 [
   {
     "testId": "TC001",
-    "name": "12345 Kumar",
+    "name": "Arun Kumar",
     "status": "PASS",
-    "actualResult": "Validation message displayed",
-    "field": "firstName",
-    "testValue": "12345",
-    "durationSeconds": 4
+    "actualResult": "success-message",
+    "durationSeconds": 13
   }
 ]
