@@ -1395,6 +1395,38 @@ npx playwright test "tests/auth/AgentUnverify.spec.js" --project=chromium --head
 
 ````
 
+````
+
+# 1. Leads Edit
+npx playwright test tests/auth/LeadsEdit.spec.js --project=chromium --headed --workers=1
+
+# 2. Task Edit
+npx playwright test tests/auth/TaskEdit.spec.js --project=chromium --headed --workers=1
+
+# 3. Guarantor Edit
+npx playwright test tests/auth/GuarantorEdit.spec.js --project=chromium --headed --workers=1
+
+# 4. Co-Applicant Edit
+npx playwright test tests/auth/Co-ApplicantEdit.spec.js --project=chromium --headed --workers=1
+
+# 5. Chit Penalty Edit
+npx playwright test tests/auth/ChitPenaltyEdit.spec.js --project=chromium --headed --workers=1
+
+# 6. Loan Penalty Edit
+npx playwright test tests/auth/LoanPenaltyEdit.spec.js --project=chromium --headed --workers=1
+
+# 7. Agent Edit
+npx playwright test tests/auth/AgentEdit.spec.js --project=chromium --headed --workers=1
+
+# 8. Employee Edit
+npx playwright test tests/auth/EmployeeEdit.spec.js --project=chromium --headed --workers=1
+
+# Run all test cases
+npx playwright test --project=chromium --headed --workers=1
+
+````
+
+
 The report displays test execution results, passed and failed tests, error details, and available screenshots or traces.
 
 ### Push Automation Changes
