@@ -2,12 +2,17 @@
 
 // AUTO-GENERATED CUSTOMER TEST DATA
 // Total records: 100
-const customerData = {
-  customerId: 'CUS2712',
-  existingName: 'Arun Kumar',
-  existingPhone: '9000000021',
-  updatedPhone: '9999999997'
-};
+const customerData = [
+  {
+  testId: 'TC001',
+  name: 'Arun Kumar',
+  phone: '9000000021',
+  updatedPhone: '9999999997',
+  // Keep all your other existing fields unchanged
+}
+];
+module.exports = customerData;
+// this dataset is used for testing the customer 
 // const customers = [
 //   {
 //     "testId": "TC001",

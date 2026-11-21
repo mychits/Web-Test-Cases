@@ -1,7 +1,12 @@
 
+'use strict';
+
 require('dotenv').config();
 
 const { test, expect } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
+
 const groups = require('../../test-data/groups');
 
 // =====================================
@@ -17,16 +22,106 @@ if (!BASE_URL || !ADMIN_ID || !OTP || !BRANCH_NAME) {
   throw new Error('Missing environment variables. Check .env file.');
 }
 
-const GROUP_URL = new URL('group-menu', BASE_URL).href;
-const ADD_GROUP_URL = new URL('add-new-group', BASE_URL).href;
+if (!Array.isArray(groups)) {
+  throw new Error('test-data/groups.js must export an array.');
+}
+
+const ROOT_URL = BASE_URL.endsWith('/')
+  ? BASE_URL
+  : `${BASE_URL}/`;
+
+const GROUP_URL = new URL('group-menu', ROOT_URL).href;
+
+const RESULTS_DIR = path.resolve(
+  process.cwd(),
+  'group-edit-results'
+);
+
+fs.mkdirSync(RESULTS_DIR, { recursive: true });
+
+const TEST_ID = process.env.EDIT_GROUP_TEST_ID || 'TC001';
+
+const groupData = groups.find(
+  group => group.testId === TEST_ID
+);
+
+if (!groupData) {
+  throw new Error(`Group test data not found: ${TEST_ID}`);
+}
+
+if (!groupData.groupCode) {
+  throw new Error(
+    `Add groupCode to ${TEST_ID} in test-data/groups.js.`
+  );
+}
+
+if (!groupData.updates || !Object.keys(groupData.updates).length) {
+  throw new Error(
+    `Add updates to ${TEST_ID} in test-data/groups.js.`
+  );
+}
+
+const FIELD_MAP = {
+  groupName: 'Enter the Group Name',
+  vacancySeat: 'Enter App Display Vacancy Seat',
+  groupValue: 'Enter Group Value',
+  groupInstallment: 'Enter Group Installment',
+  groupMembers: 'Enter Group Members',
+  dailyInstallment: 'Enter Daily Installment',
+  weeklyInstallment: 'Enter Weekly Installment',
+  monthlyInstallment: 'Enter Monthly Installment',
+  groupDuration: 'Enter Group Duration',
+  registrationFee: 'Enter Registration Fee',
+  minimumBid: 'Enter Minimum Bid %',
+  maximumBid: 'Enter Maximum Bid %',
+  agentCommission: 'Enter Agent Commission %',
+  companyCommission: 'Enter Company Commission %',
+  employeeIncentives: 'Enter Employee Incentives %'
+};
 
 test.setTimeout(600000);
+
+// =====================================
+// COMMON HELPERS
+// =====================================
+
+async function visible(locator) {
+  return locator.first().isVisible().catch(() => false);
+}
+
+function normalize(value) {
+  return String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function escapeRegex(value) {
+  return String(value)
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function exactPattern(value) {
+  return new RegExp(
+    `^\\s*${escapeRegex(value)}\\s*$`,
+    'i'
+  );
+}
+
+async function screenshot(page, name) {
+  await page.screenshot({
+    path: path.join(RESULTS_DIR, name),
+    fullPage: true
+  }).catch(() => {});
+}
 
 // =====================================
 // LOGIN
 // =====================================
 
 async function login(page) {
+  console.log('[Step 1] Opening Admin application');
+
   await page.goto(BASE_URL, {
     waitUntil: 'domcontentloaded',
     timeout: 60000
@@ -36,26 +131,28 @@ async function login(page) {
     name: /admin login/i
   });
 
-  await expect(loginHeading).toBeVisible({
-    timeout: 30000
-  });
+  if (!(await visible(loginHeading))) {
+    console.log('[Step 1] Checking existing session');
+    return;
+  }
 
   await page.locator('select').first().selectOption({
     label: BRANCH_NAME
   });
 
-  await page.getByPlaceholder('XXX-XX-XXXX').fill(ADMIN_ID);
+  await page.getByPlaceholder('XXX-XX-XXXX')
+    .fill(ADMIN_ID);
 
   await page.getByRole('button', {
     name: /send otp/i
   }).click();
 
   const otpInputs = page.locator(
-    'input[autocomplete="one-time-code"], ' +
-    'input[name*="otp" i], ' +
-    'input[placeholder*="otp" i], ' +
-    'input[inputmode="numeric"], ' +
-    'input[maxlength="6"]'
+    'input[autocomplete="one-time-code"]:visible, ' +
+    'input[name*="otp" i]:visible, ' +
+    'input[placeholder*="otp" i]:visible, ' +
+    'input[inputmode="numeric"]:visible, ' +
+    'input[maxlength="6"]:visible'
   );
 
   await expect(otpInputs.first()).toBeVisible({
@@ -65,10 +162,10 @@ async function login(page) {
   const count = await otpInputs.count();
 
   if (count === 1) {
-    await otpInputs.first().fill(OTP);
-  } else if (count === 6) {
+    await otpInputs.first().fill(String(OTP));
+  } else if (count === 6 && String(OTP).length === 6) {
     for (let i = 0; i < 6; i++) {
-      await otpInputs.nth(i).fill(OTP[i]);
+      await otpInputs.nth(i).fill(String(OTP)[i]);
     }
   } else {
     throw new Error(`Unexpected OTP input count: ${count}`);
@@ -79,10 +176,10 @@ async function login(page) {
   }).last().click();
 
   await expect(loginHeading).toBeHidden({
-    timeout: 30000
+    timeout: 45000
   });
 
-  console.log('Login successful');
+  console.log('[Step 1] Login successful');
 }
 
 // =====================================
@@ -94,211 +191,28 @@ async function closePopup(page) {
     'div.fixed.inset-0.z-\\[9999\\]'
   ).first();
 
-  if (!(await popup.isVisible().catch(() => false))) {
-    return;
-  }
+  if (!(await visible(popup))) return;
 
-  const remindLater = popup.getByRole('button', {
-    name: /remind me later/i
-  });
+  const closeButton = popup.getByRole('button', {
+    name: /remind me later|close|cancel|okay|^ok$/i
+  }).first();
 
-  if (await remindLater.isVisible().catch(() => false)) {
-    await remindLater.click();
-    await expect(popup).toBeHidden();
-    console.log('Popup closed');
+  if (await visible(closeButton)) {
+    await closeButton.click();
+
+    await expect(popup).toBeHidden({
+      timeout: 10000
+    });
   }
 }
 
 // =====================================
-// FILL INPUT
+// OPEN GROUP MANAGEMENT
 // =====================================
 
-async function fillInput(page, placeholder, value) {
-  if (value === undefined || value === null) {
-    throw new Error(`Missing value for ${placeholder}`);
-  }
+async function openGroupManagement(page) {
+  console.log('[Step 2] Opening Group Management');
 
-  const input = page.getByPlaceholder(placeholder, {
-    exact: true
-  });
-
-  await expect(input).toBeVisible({
-    timeout: 15000
-  });
-
-  await input.fill(String(value));
-
-  console.log(`Filled: ${placeholder}`);
-}
-
-// =====================================
-// SELECT DROPDOWN
-// =====================================
-
-async function selectDropdown(page, label, value) {
-  if (!value) {
-    throw new Error(`Missing value for ${label}`);
-  }
-
-  console.log(`Selecting ${label}: ${value}`);
-
-  const escapedLabel = label.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    '\\$&'
-  );
-
-  const labelPattern = new RegExp(
-    `^\\s*${escapedLabel}\\s*\\*?\\s*$`,
-    'i'
-  );
-
-  const fieldLabel = page.getByText(labelPattern).first();
-
-  await expect(fieldLabel).toBeVisible({
-    timeout: 15000
-  });
-
-  const container = fieldLabel.locator('xpath=..');
-
-  // Native dropdown
-  const nativeSelect = container.locator('select');
-
-  if (await nativeSelect.count() === 1) {
-    await nativeSelect.selectOption({
-      label: value
-    });
-
-    console.log(`${label} selected: ${value}`);
-    return;
-  }
-
-  // Ant Design dropdown
-  const antSelect = container.locator('.ant-select');
-
-  if (await antSelect.count() === 1) {
-    const selectedValue = antSelect.locator(
-      '.ant-select-selection-item'
-    );
-
-    if (await selectedValue.isVisible().catch(() => false)) {
-      const currentValue = (
-        await selectedValue.innerText()
-      ).trim();
-
-      if (currentValue.toLowerCase() === value.toLowerCase()) {
-        console.log(`${label} already selected: ${value}`);
-        return;
-      }
-    }
-
-    await antSelect.click();
-
-    // Search Relationship Manager
-    if (label === 'Relationship Manager') {
-      const searchInput = antSelect.locator(
-        'input[role="combobox"]'
-      );
-
-      await expect(searchInput).toBeVisible({
-        timeout: 15000
-      });
-
-      await searchInput.fill(value);
-    }
-
-    const option = page.locator(
-      '.ant-select-item-option:visible'
-    ).filter({
-      hasText: value
-    }).first();
-
-    await expect(option).toBeVisible({
-      timeout: 15000
-    });
-
-    await option.click();
-
-    console.log(`${label} selected: ${value}`);
-    return;
-  }
-
-  // Other custom dropdowns
-  const trigger = container.locator(
-    '[role="combobox"], button, [aria-haspopup="listbox"]'
-  ).first();
-
-  await expect(trigger).toBeVisible({
-    timeout: 15000
-  });
-
-  await trigger.click();
-
-  const option = page.getByText(value, {
-    exact: true
-  }).last();
-
-  await expect(option).toBeVisible({
-    timeout: 15000
-  });
-
-  await option.click();
-
-  console.log(`${label} selected: ${value}`);
-}
-
-// =====================================
-// FILL DATE FIELDS
-// =====================================
-
-async function fillDates(page, group) {
-  const dateFields = [
-    { label: 'Start Date', value: group.startDate },
-    { label: 'End Date', value: group.endDate }
-  ];
-
-  for (const field of dateFields) {
-    if (!field.value) {
-      if (field.label === 'End Date') continue;
-      throw new Error('Start Date is required');
-    }
-
-    const fieldLabel = page.getByText(
-      new RegExp(`^${field.label}\\s*\\*?\\s*$`, 'i')
-    ).first();
-
-    await expect(fieldLabel).toBeVisible({
-      timeout: 15000
-    });
-
-    const input = fieldLabel
-      .locator('xpath=..')
-      .locator('input')
-      .first();
-
-    await expect(input).toBeVisible({
-      timeout: 15000
-    });
-
-    const inputType = await input.getAttribute('type');
-
-    if (inputType === 'date') {
-      await input.fill(field.value);
-    } else {
-      const [year, month, day] = field.value.split('-');
-
-      await input.fill(`${day}-${month}-${year}`);
-      await input.press('Tab');
-    }
-
-    console.log(`${field.label} entered: ${field.value}`);
-  }
-}
-
-// =====================================
-// OPEN ADD GROUP FORM
-// =====================================
-
-async function openAddGroup(page) {
   await page.goto(GROUP_URL, {
     waitUntil: 'domcontentloaded',
     timeout: 60000
@@ -306,36 +220,318 @@ async function openAddGroup(page) {
 
   await closePopup(page);
 
-  console.log('Group Management page opened');
+  await expect(page.locator('table tbody tr').first())
+    .toBeVisible({ timeout: 30000 });
 
-  const addGroupButton = page.getByRole('button', {
-    name: /add group/i
+  console.log('[Step 2] Group Management opened');
+}
+
+// =====================================
+// FIND GROUP BY NAME + GROUP CODE
+// =====================================
+
+async function findGroup(page, groupName, groupCode) {
+  console.log('[Step 3] Searching group:', groupName);
+  console.log('[Step 3] Group Code:', groupCode);
+
+  if (!groupCode) {
+    throw new Error('Group Code is required.');
+  }
+
+  const rows = page.locator('table tbody tr');
+
+  const exactGroupName = exactPattern(groupName);
+  const exactGroupCode = exactPattern(groupCode);
+
+  const matchingRows = rows.filter({
+    has: page.locator('td').filter({
+      hasText: exactGroupName
+    })
+  }).filter({
+    has: page.locator('td').filter({
+      hasText: exactGroupCode
+    })
   });
 
-  await expect(addGroupButton).toBeVisible({
-    timeout: 30000
-  });
+  await expect.poll(
+    async () => matchingRows.count(),
+    { timeout: 20000 }
+  ).toBeGreaterThan(0);
 
-  console.log('Add Group button found');
+  const count = await matchingRows.count();
 
-  await page.goto(ADD_GROUP_URL, {
-    waitUntil: 'domcontentloaded',
-    timeout: 60000
-  });
+  if (count !== 1) {
+    throw new Error(
+      `Expected one group with code ${groupCode}, found ${count}.`
+    );
+  }
 
-  await closePopup(page);
+  console.log('[Step 3] Unique group found:', groupCode);
+
+  return matchingRows.first();
+}
+
+// =====================================
+// OPEN GROUP EDIT
+// =====================================
+
+async function openGroupEdit(page, group) {
+  console.log('[Step 4] Opening Group Edit');
+
+  await openGroupManagement(page);
+
+  const row = await findGroup(
+    page,
+    group.groupName,
+    group.groupCode
+  );
+
+  const rowText = await row.innerText();
+
+  console.log(
+    '[Step 4] Selected row:',
+    rowText.replace(/\s+/g, ' ').trim()
+  );
+
+  // Try a visible Edit button first.
+  const editButton = row.getByRole('button', {
+    name: /^edit$/i
+  }).first();
+
+  const editLink = row.getByRole('link', {
+    name: /^edit$/i
+  }).first();
+
+  if (await visible(editButton)) {
+    await editButton.click();
+  } else if (await visible(editLink)) {
+    await editLink.click();
+  } else {
+    // Some tables put Edit inside an Actions menu.
+    const actionButton = row.getByRole('button', {
+      name: /action|more|menu/i
+    }).first();
+
+    if (!(await visible(actionButton))) {
+      throw new Error(
+        `Could not locate Edit action for ${group.groupCode}. ` +
+        'Inspect the row action control in the browser.'
+      );
+    }
+
+    await actionButton.click();
+
+    const menuEdit = page.getByRole('menuitem', {
+      name: /^edit$/i
+    }).first();
+
+    const fallbackEdit = page.getByText(/^edit$/i).last();
+
+    if (await visible(menuEdit)) {
+      await menuEdit.click();
+    } else {
+      await expect(fallbackEdit).toBeVisible({
+        timeout: 10000
+      });
+      await fallbackEdit.click();
+    }
+  }
 
   await expect(page).toHaveURL(/add-new-group/, {
     timeout: 30000
   });
 
+  const url = new URL(page.url());
+
+  if (url.searchParams.get('edit') !== 'true') {
+    throw new Error(
+      `Edit mode was not opened. Current URL: ${page.url()}`
+    );
+  }
+
+  const groupId = url.searchParams.get('groupId');
+
+  if (!groupId) {
+    throw new Error('Group Edit URL has no groupId.');
+  }
+
   await expect(
-    page.getByPlaceholder('Enter the Group Name')
-  ).toBeVisible({
+    page.getByPlaceholder('Enter the Group Name', {
+      exact: true
+    })
+  ).toHaveValue(group.groupName, {
     timeout: 30000
   });
 
-  console.log('Add Group form opened successfully');
+  console.log('[Step 4] Group Edit opened');
+  console.log('[Step 4] Group ID:', groupId);
+
+  return groupId;
+}
+
+// =====================================
+// LOCATE DROPDOWN
+// =====================================
+
+async function getDropdownContainer(page, label) {
+  const fieldLabel = page.getByText(
+    exactPattern(label)
+  ).first();
+
+  await expect(fieldLabel).toBeVisible({
+    timeout: 15000
+  });
+
+  const parent = fieldLabel.locator('xpath=..');
+
+  if (await parent.locator('select, .ant-select').count()) {
+    return parent;
+  }
+
+  const container = fieldLabel.locator(
+    'xpath=ancestor::div[' +
+    './/select or ' +
+    './/*[contains(concat(" ",normalize-space(@class)," "),' +
+    '" ant-select ")]' +
+    '][1]'
+  );
+
+  await expect(container).toBeVisible({
+    timeout: 15000
+  });
+
+  return container;
+}
+
+// =====================================
+// UPDATE GROUP TYPE
+// =====================================
+
+async function updateGroupType(page, newType) {
+  console.log('[Edit] Updating Group Type:', newType);
+
+  const container = await getDropdownContainer(
+    page,
+    'Group Type'
+  );
+
+  const nativeSelect = container.locator('select').first();
+
+  if (await visible(nativeSelect)) {
+    await nativeSelect.selectOption({
+      label: newType
+    });
+
+    const selectedText = await nativeSelect
+      .locator('option:checked')
+      .textContent();
+
+    expect(normalize(selectedText)).toBe(
+      normalize(newType)
+    );
+
+    console.log('[Edit] Group Type selected:', newType);
+    return;
+  }
+
+  const dropdown = container.locator('.ant-select').first();
+
+  await expect(dropdown).toBeVisible({
+    timeout: 15000
+  });
+
+  const selectedValue = dropdown.locator(
+    '.ant-select-selection-item'
+  ).first();
+
+  if (await visible(selectedValue)) {
+    const currentValue = await selectedValue.innerText();
+
+    if (normalize(currentValue) === normalize(newType)) {
+      console.log('[Edit] Group Type already:', newType);
+      return;
+    }
+  }
+
+  await dropdown.locator(
+    '.ant-select-selector'
+  ).first().click();
+
+  const popup = page.locator(
+    '.ant-select-dropdown:visible'
+  ).last();
+
+  await expect(popup).toBeVisible({
+    timeout: 15000
+  });
+
+  const option = popup.locator(
+    '.ant-select-item-option:not(.ant-select-item-option-disabled)'
+  ).filter({
+    hasText: exactPattern(newType)
+  });
+
+  await expect(option).toHaveCount(1, {
+    timeout: 15000
+  });
+
+  await option.click();
+
+  await expect(selectedValue).toHaveText(
+    exactPattern(newType)
+  );
+
+  console.log('[Edit] Group Type selected:', newType);
+}
+
+// =====================================
+// UPDATE INPUT FIELDS
+// =====================================
+
+async function updateGroupFields(page, updates) {
+  console.log('[Step 5] Updating group fields');
+
+  for (const [fieldName, newValue] of Object.entries(updates)) {
+    if (newValue === undefined || newValue === null) {
+      throw new Error(`Missing value for ${fieldName}`);
+    }
+
+    if (fieldName === 'groupType') {
+      await updateGroupType(page, String(newValue));
+      continue;
+    }
+
+    const placeholder = FIELD_MAP[fieldName];
+
+    if (!placeholder) {
+      throw new Error(
+        `Unsupported edit field: ${fieldName}`
+      );
+    }
+
+    const input = page.getByPlaceholder(
+      placeholder,
+      { exact: true }
+    );
+
+    await expect(input).toBeVisible({
+      timeout: 15000
+    });
+
+    const oldValue = await input.inputValue();
+
+    console.log(
+      `[Edit] ${fieldName}: ${oldValue} -> ${newValue}`
+    );
+
+    if (normalize(oldValue) !== normalize(newValue)) {
+      await input.fill(String(newValue));
+    }
+
+    await expect(input).toHaveValue(String(newValue));
+  }
+
+  console.log('[Step 5] Requested fields updated');
 }
 
 // =====================================
@@ -352,23 +548,28 @@ async function printValidationMessages(page) {
     '.text-red-600'
   ).allTextContents();
 
-  const cleanedMessages = messages
+  const cleaned = messages
     .map(message => message.trim())
     .filter(Boolean);
 
-  console.log('Validation/error messages:', cleanedMessages);
+  console.log(
+    '[Validation] Messages:',
+    JSON.stringify(cleaned)
+  );
 
-  return cleanedMessages;
+  return cleaned;
 }
 
 // =====================================
-// SAVE GROUP AND CONFIRM
+// SAVE GROUP
 // =====================================
 
-async function saveAndConfirmGroup(page, group) {
+async function saveGroup(page) {
+  console.log('[Step 6] Saving group');
+
   const saveButton = page.getByRole('button', {
-    name: /^save group$/i
-  });
+    name: /^(save group|update group|save changes|update)$/i
+  }).first();
 
   await expect(saveButton).toBeVisible({
     timeout: 15000
@@ -378,255 +579,132 @@ async function saveAndConfirmGroup(page, group) {
 
   await saveButton.click();
 
-  console.log('Save Group button clicked');
+  console.log('[Step 6] Save button clicked');
 
   const confirmButton = page.getByRole('button', {
     name: /^confirm$/i
-  });
+  }).first();
 
-  try {
-    await expect(confirmButton).toBeVisible({
-      timeout: 15000
+  // The application may show a confirmation dialog.
+  const confirmationAppeared = await confirmButton
+    .waitFor({
+      state: 'visible',
+      timeout: 10000
+    })
+    .then(() => true)
+    .catch(() => false);
+
+  if (confirmationAppeared) {
+    await confirmButton.click();
+
+    await expect(confirmButton).toBeHidden({
+      timeout: 30000
     });
-  } catch (error) {
-    console.log('Confirmation popup did not appear');
 
-    await printValidationMessages(page);
-
-    await page.screenshot({
-      path: 'group-confirmation-not-opened.png',
-      fullPage: true
-    });
-
-    throw new Error(
-      'Save Group did not open the confirmation popup. ' +
-      'Check group-confirmation-not-opened.png.'
-    );
-  }
-
-  console.log('Confirmation popup opened');
-
-  await expect(confirmButton).toBeEnabled();
-
-  await confirmButton.click();
-
-  console.log('Confirm button clicked');
-
-  await expect(confirmButton).toBeHidden({
-    timeout: 30000
-  });
-
-  console.log('Confirmation popup closed');
-
-  if (/add-new-group/.test(page.url())) {
-    console.log(
-      'Still on Add Group page. Group save is not yet verified.'
-    );
+    console.log('[Step 6] Confirmation completed');
   } else {
-    console.log('Navigated away from Add Group page');
+    console.log(
+      '[Step 6] No confirmation dialog appeared'
+    );
   }
+
+  await printValidationMessages(page);
 
   console.log(
-    `Group confirmation completed: ${group.groupName}`
+    '[Step 6] Save action completed; verifying persistence next'
   );
 }
 
 // =====================================
-// CREATE GROUP
+// VERIFY UPDATED GROUP
 // =====================================
 
-async function createGroup(page, group) {
-  console.log(`Creating group: ${group.groupName}`);
+async function verifyGroupUpdate(page, group, groupId) {
+  console.log('[Step 7] Reopening group for verification');
 
-  await openAddGroup(page);
+  const editUrl = new URL('add-new-group', ROOT_URL);
 
-  // =====================================
-  // GROUP NAME
-  // =====================================
+  editUrl.searchParams.set('edit', 'true');
+  editUrl.searchParams.set('groupId', groupId);
 
-  await fillInput(
-    page,
-    'Enter the Group Name',
-    group.groupName
-  );
+  await page.goto(editUrl.href, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000
+  });
 
-  // =====================================
-  // GROUP CATEGORY - NEW
-  // =====================================
+  await closePopup(page);
 
-  await selectDropdown(
-    page,
-    'Group Category',
-    group.groupCategory
-  );
+  await expect(
+    page.getByPlaceholder('Enter the Group Name', {
+      exact: true
+    })
+  ).toHaveValue(group.groupName, {
+    timeout: 30000
+  });
 
-  console.log('Group Category selected successfully');
+  for (const [fieldName, expectedValue] of Object.entries(
+    group.updates
+  )) {
+    if (fieldName === 'groupType') {
+      const container = await getDropdownContainer(
+        page,
+        'Group Type'
+      );
 
-  // =====================================
-  // GROUP TYPE
-  // =====================================
+      const nativeSelect = container.locator('select').first();
 
-  await selectDropdown(
-    page,
-    'Group Type',
-    group.groupType
-  );
+      if (await visible(nativeSelect)) {
+        await expect.poll(async () => {
+          return normalize(
+            await nativeSelect
+              .locator('option:checked')
+              .textContent()
+          );
+        }).toBe(normalize(expectedValue));
+      } else {
+        const selected = container.locator(
+          '.ant-select-selection-item'
+        ).first();
 
-  // =====================================
-  // RELATIONSHIP MANAGER
-  // =====================================
+        await expect(selected).toHaveText(
+          exactPattern(expectedValue),
+          { timeout: 20000 }
+        );
+      }
 
-  await selectDropdown(
-    page,
-    'Relationship Manager',
-    group.relationshipManager
-  );
+      console.log(
+        `[Verified] groupType: ${expectedValue}`
+      );
 
-  // =====================================
-  // BASIC GROUP DETAILS
-  // =====================================
+      continue;
+    }
 
-  await fillInput(
-    page,
-    'Enter App Display Vacancy Seat',
-    group.vacancySeat
-  );
+    const placeholder = FIELD_MAP[fieldName];
 
-  await fillInput(
-    page,
-    'Enter Group Value',
-    group.groupValue
-  );
+    if (!placeholder) {
+      throw new Error(
+        `Unsupported verification field: ${fieldName}`
+      );
+    }
 
-  await fillInput(
-    page,
-    'Enter Group Installment',
-    group.groupInstallment
-  );
+    const input = page.getByPlaceholder(
+      placeholder,
+      { exact: true }
+    );
 
-  await fillInput(
-    page,
-    'Enter Group Members',
-    group.groupMembers
-  );
+    await expect(input).toHaveValue(
+      String(expectedValue),
+      { timeout: 20000 }
+    );
 
-  // =====================================
-  // INSTALLMENT DETAILS
-  // =====================================
-
-  await fillInput(
-    page,
-    'Enter Daily Installment',
-    group.dailyInstallment
-  );
-
-  await fillInput(
-    page,
-    'Enter Weekly Installment',
-    group.weeklyInstallment
-  );
-
-  await fillInput(
-    page,
-    'Enter Monthly Installment',
-    group.monthlyInstallment
-  );
-
-  await fillInput(
-    page,
-    'Enter Group Duration',
-    group.groupDuration
-  );
-
-  await fillInput(
-    page,
-    'Enter Registration Fee',
-    group.registrationFee
-  );
-
-  console.log('Basic group details completed');
-
-  // =====================================
-  // START DATE TYPE
-  // =====================================
-
-  await page.getByRole('radio', {
-    name: group.startDateType,
-    exact: true
-  }).check();
-
-  // =====================================
-  // START DATE AND END DATE
-  // =====================================
-
-  await fillDates(page, group);
-
-  // =====================================
-  // BID CONFIGURATION
-  // =====================================
-
-  await fillInput(
-    page,
-    'Enter Minimum Bid %',
-    group.minimumBid
-  );
-
-  await fillInput(
-    page,
-    'Enter Maximum Bid %',
-    group.maximumBid
-  );
-
-  // =====================================
-  // COMMISSION DETAILS
-  // =====================================
-
-  await fillInput(
-    page,
-    'Enter Agent Commission %',
-    group.agentCommission
-  );
-
-  await fillInput(
-    page,
-    'Enter Company Commission %',
-    group.companyCommission
-  );
-
-  await fillInput(
-    page,
-    'Enter Employee Incentives %',
-    group.employeeIncentives
-  );
-
-  console.log('Bid and commission details completed');
-
-  // =====================================
-  // AUCTION CONFIGURATION
-  // =====================================
-
-  await selectDropdown(
-    page,
-    'Auction Processing Type',
-    group.auctionProcessingType
-  );
-
-  await selectDropdown(
-    page,
-    'Auction Mode',
-    group.auctionMode
-  );
-
-  console.log('Auction configuration completed');
-
-  // =====================================
-  // SAVE AND CONFIRM
-  // =====================================
-
-  await saveAndConfirmGroup(page, group);
+    console.log(
+      `[Verified] ${fieldName}: ${expectedValue}`
+    );
+  }
 
   console.log(
-    `Group creation flow completed: ${group.groupName}`
+    '[SUCCESS] Group updates persisted:',
+    group.groupCode
   );
 }
 
@@ -634,43 +712,57 @@ async function createGroup(page, group) {
 // MAIN TEST
 // =====================================
 
-test('Login once and create groups', async ({ page }) => {
+test(`Edit Group ${TEST_ID}`, async ({ page }) => {
   page.setDefaultTimeout(30000);
   page.setDefaultNavigationTimeout(60000);
 
   try {
-    await test.step(
-      'Login to MyChits Admin',
-      async () => {
-        await login(page);
-      }
-    );
+    await login(page);
 
     await closePopup(page);
 
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[i];
+    const groupId = await openGroupEdit(
+      page,
+      groupData
+    );
 
-      await test.step(
-        `Create group ${i + 1}: ${group.groupName}`,
-        async () => {
-          await createGroup(page, group);
-        }
-      );
-    }
+    await updateGroupFields(
+      page,
+      groupData.updates
+    );
 
-    console.log('All group confirmation flows completed');
+    await screenshot(
+      page,
+      `${TEST_ID}-before-save.png`
+    );
+
+    await saveGroup(page);
+
+    await verifyGroupUpdate(
+      page,
+      groupData,
+      groupId
+    );
+
+    await screenshot(
+      page,
+      `${TEST_ID}-verified.png`
+    );
+
+    console.log(
+      `[SUCCESS] ${TEST_ID} completed successfully`
+    );
 
   } catch (error) {
     console.error(
-      'Group creation failed:',
+      '[ERROR] Group Edit failed:',
       error.message
     );
 
-    await page.screenshot({
-      path: 'group-creation-error.png',
-      fullPage: true
-    }).catch(() => {});
+    await screenshot(
+      page,
+      `${TEST_ID}-error.png`
+    );
 
     throw error;
   }
